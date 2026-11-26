@@ -1,8 +1,10 @@
-const CACHE_NAME = "voyage-v10";
+const CACHE_NAME = "waypoint-v11";
 const ASSETS = [
   "./",
   "./index.html",
   "./css/style.css",
+  "./css/redesign.css",
+  "./css/redesign.css",
   "./css/responsive.css",
   "./css/themes.css",
   "./js/app.js",

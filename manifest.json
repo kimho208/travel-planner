@@ -1,6 +1,6 @@
 {
-  "name": "Voyage 올인원 여행 플래너",
-  "short_name": "Voyage",
+  "name": "WAYPOINT 올인원 여행 플래너",
+  "short_name": "WAYPOINT",
   "description": "여행 일정과 예산을 관리하는 여행 플래너",
   "start_url": "./index.html#dashboard",
   "scope": "./",
