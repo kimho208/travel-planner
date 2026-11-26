@@ -114,3 +114,11 @@ body{background:var(--paper);color:var(--ink);font-family:Inter,Pretendard,-appl
 [data-theme=dark] .expense-form input,[data-theme=dark] .expense-form select,[data-theme=dark] .checklist-form input,[data-theme=dark] .checklist-form select,[data-theme=dark] .budget-category-row input{background:#111c17;border-color:#34453a;color:#e5eee7}
 [data-theme=dark] .checklist-filters button{background:#17251f;border-color:#34453a;color:#aab8ae}
 [data-theme=dark] .checklist-filters button.active{background:#253b30;color:#d9e8dd}
+
+.expense-amount small{display:block;margin-top:3px;color:#98a49c;font-size:8px;font-weight:500}
+.budget-settlement-row{display:grid;grid-template-columns:70px 1fr;gap:5px 8px;padding:10px 0;border-bottom:1px solid #edf0ed}
+.budget-settlement-row>span{grid-row:1/3;color:#52675b;font-size:10px;font-weight:750;align-self:center}
+.budget-settlement-row small{color:#9aa59e;font-size:8px}
+.budget-settlement-row b{font-size:9px}
+.budget-settlement-row b.positive{color:#3e8060}.budget-settlement-row b.negative{color:#c56c57}
+#integrationRefresh{margin-top:12px}
