@@ -16,3 +16,101 @@ body{background:var(--paper);color:var(--ink);font-family:Inter,Pretendard,-appl
 .panel,.settings-card,.checklist-panel{border:1px solid var(--line);border-radius:14px;background:#fff;box-shadow:0 5px 18px #1b302a05}.budget-total{background:var(--forest);box-shadow:none}.budget-mini{border-color:var(--line);border-radius:13px;box-shadow:none}.map-placeholder{border-color:var(--line);background:#f0f3ef}.notice{border-color:#e0e8e2;border-radius:10px;background:#f2f6f2;color:#526e5d}.status-pill{border-radius:7px}.modal{border-radius:16px}.app-footer{color:#a0aaa4}.mobile-nav{border-top-color:var(--line)}.mobile-nav .mobile-add{background:var(--forest)}button,a,input,select,textarea{font-family:inherit}
 @media(max-width:1100px){.hero-visual{width:38%}.main-area{padding-left:28px;padding-right:28px}}@media(max-width:850px){.sidebar{width:220px}.main-area{margin-left:220px}.auth-panel{grid-template-columns:1fr;gap:14px}.hero-panel{padding:30px}.hero-copy h2{font-size:27px}}@media(max-width:700px){.main-area{margin:0;padding:0 16px 94px}.topbar{height:62px;margin-bottom:20px}.page-heading h1{font-size:26px}.hero-panel{min-height:265px;padding:27px 23px;align-items:flex-start}.hero-visual{position:absolute;right:-15px;bottom:-30px;width:70%;height:155px;opacity:.7}.hero-copy{max-width:100%}.hero-copy h2{font-size:26px}.hero-copy p{max-width:260px}.auth-panel{padding:17px}.auth-controls{grid-template-columns:1fr}.auth-actions{gap:6px}.auth-actions .primary-btn{width:100%}.section-head{margin:26px 0 12px}.wizard-card{padding:20px 17px}.stats-grid{gap:9px}.stat-card{padding:14px}.mobile-nav{background:rgba(255,255,255,.96)}}
 [data-theme=dark] body,[data-theme=dark] .app-shell{background:#101a17;color:#e4ece6}[data-theme=dark] .sidebar,[data-theme=dark] .topbar,[data-theme=dark] .auth-panel,[data-theme=dark] .stat-card,[data-theme=dark] .trip-card,[data-theme=dark] .candidate-card,[data-theme=dark] .wizard-card,[data-theme=dark] .panel,[data-theme=dark] .settings-card,[data-theme=dark] .checklist-panel{background:#17251f;border-color:#2b3b32}[data-theme=dark] .brand,[data-theme=dark] .page-heading h1,[data-theme=dark] .section-head h2,[data-theme=dark] .stat-card strong,[data-theme=dark] .trip-card h3,[data-theme=dark] .auth-copy strong{color:#e7efe9}[data-theme=dark] .auth-controls input,[data-theme=dark] .field input,[data-theme=dark] .field select,[data-theme=dark] .field textarea{background:#111c17;border-color:#34453a;color:#e7efe9}[data-theme=dark] .auth-copy p{color:#a7b7ac}[data-theme=dark] .storage-card{background:#1b2c24;border-color:#34453a}[data-theme=dark] .profile-mini strong{color:#dce8df}[data-theme=dark] .nav-link.active{background:#253b30;color:#d7e7dc}
+
+/* Functional travel workspace */
+.sidebar-scrim{display:none;position:fixed;inset:0;background:rgba(16,29,24,.46);backdrop-filter:blur(2px);z-index:9}
+.budget-overview,.budget-panel,.checklist-board{border:1px solid var(--line);border-radius:16px;background:#fff;box-shadow:0 5px 22px rgba(28,48,39,.045)}
+.budget-overview{padding:25px 26px;margin:0 0 16px}
+.budget-overview-title,.budget-panel-heading,.checklist-board-head,.checklist-add-title{display:flex;justify-content:space-between;align-items:center;gap:15px}
+.budget-overview-title h2,.checklist-board-head h2{margin:5px 0;color:#253b32;font-size:22px;font-weight:820;letter-spacing:-.05em}
+.budget-overview-title p,.checklist-board-head p{margin:4px 0 0;color:#89968f;font-size:11px}
+.budget-people{padding:7px 11px;border:1px solid #e6ece7;border-radius:99px;color:#718078;font-size:10px}
+.budget-kpis{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:11px;margin-top:22px}
+.budget-kpi{padding:16px;border:1px solid #e8ede9;border-radius:12px;background:#fbfcfa}
+.budget-kpi span,.budget-kpi small{display:block;color:#89968f;font-size:10px}
+.budget-kpi strong{display:block;margin:8px 0 4px;color:#2b4036;font-size:21px;font-weight:820;letter-spacing:-.045em}
+.budget-kpi strong.over{color:#c65f4e}
+.budget-kpi-primary{background:#173b35;border-color:#173b35}
+.budget-kpi-primary span,.budget-kpi-primary small{color:#c7d8ce}
+.budget-kpi-primary strong{color:white}
+.budget-progress{margin-top:18px}
+.budget-progress>div:first-child{display:flex;justify-content:space-between;margin-bottom:8px;color:#74847a;font-size:10px}
+.budget-progress-track,.budget-category-track,.checklist-progress-bar{height:7px;overflow:hidden;border-radius:99px;background:#edf1ed}
+.budget-progress-track i,.budget-category-track i,.checklist-progress-bar i{display:block;height:100%;border-radius:99px;background:#df8a67;transition:width .2s}
+.budget-workspace{display:grid;grid-template-columns:minmax(0,1.55fr) minmax(280px,.9fr);align-items:start;gap:15px}
+.budget-panel{padding:20px;margin-bottom:14px}
+.budget-panel-heading{margin-bottom:15px}
+.budget-panel-heading h3,.expense-list-heading h3,.checklist-add-title h3{margin:4px 0 0;color:#2c4037;font-size:15px;font-weight:800}
+.panel-subtitle{color:#9aa59e;font-size:9px}
+.expense-form,.checklist-form{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.expense-form label,.checklist-form label{display:grid;gap:6px;color:#75837b;font-size:10px;font-weight:700}
+.expense-form input,.expense-form select,.checklist-form input,.checklist-form select{width:100%;min-width:0;height:39px;padding:0 10px;border:1px solid #e3e9e4;border-radius:8px;background:#fbfcfa;color:#34473e;font:inherit;font-size:11px}
+.expense-form input:focus,.expense-form select:focus,.checklist-form input:focus,.checklist-form select:focus{outline:0;border-color:#8da797;box-shadow:0 0 0 3px #285c5010}
+.expense-note-field{grid-column:1/-1}
+.expense-form-actions{display:flex;grid-column:1/-1;gap:8px}
+.expense-form-actions .primary-btn{min-height:39px}
+.expense-list-heading{display:flex;justify-content:space-between;align-items:center;margin:22px 0 8px;padding-top:16px;border-top:1px solid #edf0ed}
+.expense-list-heading span{color:#9aa59e;font-size:10px}
+.expense-row{display:grid;grid-template-columns:35px minmax(0,1fr) auto auto;align-items:center;gap:10px;padding:12px 0;border-bottom:1px solid #edf0ed}
+.expense-icon{display:grid;place-items:center;width:34px;height:34px;border-radius:10px;background:#eff4ef;color:#476455;font-size:15px}
+.expense-main{min-width:0}
+.expense-main strong{display:block;overflow:hidden;color:#34473e;font-size:11px;text-overflow:ellipsis;white-space:nowrap}
+.expense-main small,.expense-main p{display:block;margin:4px 0 0;color:#98a39c;font-size:9px}
+.expense-amount{color:#2b4036;font-size:12px;font-weight:800;white-space:nowrap}
+.expense-actions{display:flex;gap:5px}
+.expense-actions button{padding:5px;border:0;background:transparent;color:#87948d;font-size:9px}
+.expense-actions button:hover{color:#c66b55}
+.budget-empty{padding:24px 10px;text-align:center;color:#9aa59e;font-size:11px}
+.budget-breakdown-row,.budget-planned-total,.transport-reference>div:not(.budget-panel-heading){display:flex;justify-content:space-between;gap:10px;padding:9px 0;border-bottom:1px solid #edf0ed;color:#748078;font-size:10px}
+.budget-breakdown-row b,.transport-reference b{color:#3c5146;font-size:10px}
+.budget-breakdown-total,.budget-planned-total{display:flex;justify-content:space-between;align-items:center;margin-top:10px;padding-top:13px;border-top:1px solid #e8ede9;color:#64746b;font-size:11px}
+.budget-breakdown-total strong,.budget-planned-total strong{color:#263d33;font-size:16px}
+.budget-helper{margin:-5px 0 13px;color:#97a29b;font-size:10px;line-height:1.6}
+.budget-category-row{padding:10px 0;border-bottom:1px solid #edf0ed}
+.budget-category-row>div:first-child{display:flex;justify-content:space-between;margin-bottom:7px;color:#64746b;font-size:10px}
+.budget-category-row>div:first-child strong{color:#34483e}
+.budget-category-track{height:4px;margin-bottom:8px}
+.budget-category-row label{display:flex;align-items:center;justify-content:space-between;color:#a0aaa4;font-size:9px}
+.budget-category-row input{width:112px;height:29px;padding:0 7px;border:1px solid #e7ece8;border-radius:6px;text-align:right;font-size:10px}
+.transport-reference p,.transport-reference small{color:#97a29b;font-size:10px;line-height:1.6}
+.checklist-board{padding:25px}
+.checklist-board-head{align-items:flex-start}
+.checklist-progress-ring{display:grid;place-items:center;min-width:76px;min-height:76px;border:6px solid #e6eee8;border-top-color:#d98563;border-radius:50%;text-align:center}
+.checklist-progress-ring strong{color:#2d4b3d;font-size:17px}
+.checklist-progress-ring small{margin-top:-14px;color:#98a49c;font-size:8px}
+.checklist-progress-bar{margin:18px 0}
+.checklist-filters{display:flex;gap:6px;overflow:auto;padding:3px 0 15px;border-bottom:1px solid #edf0ed}
+.checklist-filters button{flex:0 0 auto;padding:8px 11px;border:1px solid #e5ebe6;border-radius:99px;background:#fff;color:#7b8981;font-size:9px}
+.checklist-filters button.active{border-color:#c6d8ca;background:#edf4ee;color:#315642;font-weight:800}
+.checklist-add-panel{margin:17px 0;padding:16px;border:1px solid #e7ece8;border-radius:12px;background:#fbfcfa}
+.checklist-add-title{margin-bottom:13px}
+.checklist-add-title .secondary-btn{min-height:32px;padding:0 10px;font-size:9px}
+.checklist-form{grid-template-columns:repeat(3,minmax(0,1fr));align-items:end}
+.checklist-form>button{min-height:39px}
+.checklist-groups{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+.checklist-group{padding:14px;border:1px solid #edf0ed;border-radius:12px}
+.checklist-group-title{display:flex;justify-content:space-between;align-items:center;margin-bottom:8px}
+.checklist-group-title h3{margin:0;color:#40564a;font-size:12px;font-weight:800}
+.checklist-group-title span{color:#9aa59e;font-size:9px}
+.checklist-task{display:flex;align-items:flex-start;gap:10px;padding:12px 0;border-bottom:1px solid #f0f2ef}
+.checklist-task:last-child{border-bottom:0}
+.checklist-task>input{width:16px;height:16px;margin:2px 0 0;accent-color:#315c47}
+.checklist-task-main{flex:1;min-width:0}
+.checklist-task-main>strong{display:block;color:#43554b;font-size:10px;font-weight:700;line-height:1.5}
+.checklist-task.is-done .checklist-task-main>strong{text-decoration:line-through;color:#aab3ad}
+.checklist-task-meta{display:flex;flex-wrap:wrap;gap:7px;margin-top:5px;color:#9aa59e;font-size:8px}
+.task-priority{padding:2px 6px;border-radius:99px;background:#f0f3f0}
+.task-priority.high{background:#fbefeb;color:#bc6956}.task-priority.low{background:#f2f4ed;color:#83906d}
+.checklist-task>button{border:0;background:transparent;color:#a0aaa4;font-size:16px}
+.checklist-task>button:hover{color:#c66b55}
+.sidebar-scrim.open{display:block}
+.modal-backdrop.open{display:flex}
+@media(max-width:1000px){.budget-workspace{grid-template-columns:1fr}.budget-side{display:grid;grid-template-columns:1fr 1fr;gap:12px}.budget-side .budget-panel{margin:0}.transport-reference{grid-column:1/-1}}
+@media(max-width:700px){.sidebar{display:flex!important;visibility:hidden;transform:translateX(-105%);transition:transform .22s ease,visibility .22s;z-index:20}.sidebar.open{visibility:visible;transform:translateX(0)}.sidebar-scrim.open{display:block;z-index:19}.main-area{margin:0}.budget-overview{padding:18px}.budget-overview-title h2,.checklist-board-head h2{font-size:19px}.budget-kpis{grid-template-columns:1fr 1fr;gap:8px}.budget-kpi{padding:12px}.budget-kpi strong{font-size:17px}.budget-workspace{grid-template-columns:1fr}.budget-side{display:block}.budget-side .budget-panel{margin-bottom:12px}.expense-form{grid-template-columns:1fr 1fr}.expense-row{grid-template-columns:30px minmax(0,1fr) auto}.expense-actions{grid-column:2/-1;justify-content:flex-end}.checklist-board{padding:17px}.checklist-board-head{align-items:center}.checklist-form{grid-template-columns:1fr 1fr}.checklist-groups{grid-template-columns:1fr}.checklist-add-title{align-items:flex-start}.checklist-add-title .secondary-btn{white-space:nowrap}.checklist-task-main>strong{font-size:11px}}
+[data-theme=dark] .budget-overview,[data-theme=dark] .budget-panel,[data-theme=dark] .checklist-board{background:#17251f;border-color:#2b3b32}
+[data-theme=dark] .budget-overview-title h2,[data-theme=dark] .budget-panel-heading h3,[data-theme=dark] .checklist-board-head h2,[data-theme=dark] .checklist-group-title h3{color:#e5eee7}
+[data-theme=dark] .budget-kpi,[data-theme=dark] .checklist-add-panel,[data-theme=dark] .checklist-group{background:#1b2c24;border-color:#34453a}
+[data-theme=dark] .budget-kpi strong,[data-theme=dark] .expense-main strong,[data-theme=dark] .expense-amount,[data-theme=dark] .budget-breakdown-row b,[data-theme=dark] .budget-planned-total strong,[data-theme=dark] .checklist-task-main>strong{color:#e1ebe3}
+[data-theme=dark] .expense-form input,[data-theme=dark] .expense-form select,[data-theme=dark] .checklist-form input,[data-theme=dark] .checklist-form select,[data-theme=dark] .budget-category-row input{background:#111c17;border-color:#34453a;color:#e5eee7}
+[data-theme=dark] .checklist-filters button{background:#17251f;border-color:#34453a;color:#aab8ae}
+[data-theme=dark] .checklist-filters button.active{background:#253b30;color:#d9e8dd}
