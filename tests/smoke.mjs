@@ -11,10 +11,12 @@ page.on("console",m=>{if(m.type()==="error")errors.push("CONSOLE: "+m.text())});
 try{
  await page.goto(baseURL,{waitUntil:"networkidle",timeout:60000});
  await page.locator("#view-home.active").waitFor({timeout:15000});
+ await page.waitForFunction(()=>document.documentElement.dataset.appReady==="true",null,{timeout:15000});
  assert.ok(await page.locator(".home-hero").isVisible(),"New homepage hero must render");
  assert.equal(await page.locator(".rail-link[data-view]").count(),4,"Primary navigation must be present");
  await page.setViewportSize({width:390,height:844});
  await page.locator("#menuOpen").click();
+ await page.waitForFunction(()=>document.querySelector("#rail")?.classList.contains("open"),null,{timeout:5000});
  assert.ok(await page.locator("#rail").evaluate(x=>x.classList.contains("open")),"Mobile navigation opens");
  await page.locator("#scrim").click({position:{x:350,y:400}});
  assert.ok(!(await page.locator("#rail").evaluate(x=>x.classList.contains("open"))),"Mobile navigation closes from scrim");
