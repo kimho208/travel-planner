@@ -13,47 +13,59 @@ page.on("console", message => {
   if (message.type() === "error") errors.push(`CONSOLE ERROR: ${message.text()}`);
 });
 page.on("requestfailed", request => {
-  errors.push(`REQUEST FAILED: ${request.url()} — ${request.failure()?.errorText || "unknown"}`);
+  // Third-party map embeds may be blocked in CI; first-party application failures are not ignored.
+  if (new URL(request.url()).hostname.endsWith("github.io")) {
+    errors.push(`REQUEST FAILED: ${request.url()} — ${request.failure()?.errorText || "unknown"}`);
+  }
 });
 
 try {
+  await page.addInitScript(() => {
+    const days = ["2026-12-23","2026-12-24","2026-12-25","2026-12-26","2026-12-27"];
+    localStorage.setItem("voyage-planner-data-v1", JSON.stringify({
+      version: 1, activeTripId: "smoke-trip", theme: "light",
+      trips: [{
+        id: "smoke-trip", destination: "일본 오사카", startDate: days[0], endDate: days[4],
+        travelers: 2, targetBudget: 1500000, style: "관광·명소", transport: "대중교통",
+        status: "upcoming", costs: {}, checklist: [],
+        itinerary: days.map((date, i) => ({ date, theme: "오사카 탐방", items: [{ time: "10:00", name: "테스트 장소 " + (i + 1) }] }))
+      }]
+    }));
+  });
   await page.goto(baseURL, { waitUntil: "networkidle", timeout: 60000 });
   await page.locator("#page-dashboard").waitFor({ state: "visible", timeout: 15000 });
 
-  // 1. Dashboard -> New trip navigation
-  await page.locator('[data-go="new-trip"]').first().click();
-  await page.waitForFunction(() => location.hash === "#new-trip");
+  // Existing trip data renders and navigation works.
+  assert.equal(await page.locator("#statTrips").textContent(), "1");
+  await page.locator('[data-route="itinerary"]').first().click();
+  await page.waitForFunction(() => location.hash === "#itinerary");
+  await page.locator(".trip-planner-grid").waitFor({ state: "visible" });
+  assert.equal(await page.locator(".day-selector .day-tab").count(), 5);
 
-  // 2. Complete the three-step trip wizard
+  // Creating an AI trip without signing in must explain the gate, not create a fake draft or console error.
+  await page.locator('[data-go="new-trip"]').first().click();
   await page.locator('input[name="destination"]').fill("일본 오사카");
   await page.locator("#dateRangeTrigger").click();
   await page.locator("#calendarNext").click();
   await page.locator('[data-date="2026-12-23"]').click();
   await page.locator('[data-date="2026-12-27"]').click();
-  await page.locator('input[name="targetBudget"]').fill("1500000");
   await page.locator("#wizardNext").click();
   await page.locator("#wizardNext").click();
   await page.locator("#wizardNext").click();
-
-  await page.waitForFunction(() => location.hash === "#itinerary");
+  await page.waitForFunction(() => location.hash === "#dashboard");
   const saved = await page.evaluate(() => JSON.parse(localStorage.getItem("voyage-planner-data-v1") || "null"));
-  assert.ok(saved?.trips?.length === 1, "Trip was not saved to localStorage");
-  assert.equal(saved.trips[0].targetBudget, 1500000, "Budget value was not parsed correctly");
-  assert.equal(saved.trips[0].itinerary?.length, 5, "A Dec 23–27 trip should contain all five calendar days");
-  assert.deepEqual(saved.trips[0].itinerary.map(day => day.date), ["2026-12-23", "2026-12-24", "2026-12-25", "2026-12-26", "2026-12-27"], "Itinerary dates are incorrect");
+  assert.equal(saved.trips.length, 1, "An unauthenticated placeholder trip should not be created");
+  assert.ok(await page.locator("#authPanel").isVisible(), "Login instructions should be visible");
 
-  // 3. Trip list route and card rendering
+  // Trip list and theme controls.
   await page.locator('[data-route="trips"]').first().click();
   await page.waitForFunction(() => location.hash === "#trips");
   await page.locator("#allTrips .trip-card").first().waitFor({ state: "visible" });
-
-  // 4. Theme control
   await page.locator("#themeToggle").click();
-  const theme = await page.locator("html").getAttribute("data-theme");
-  assert.equal(theme, "dark", "Theme toggle did not switch to dark mode");
+  assert.equal(await page.locator("html").getAttribute("data-theme"), "dark");
 
   if (errors.length) throw new Error("Browser errors detected:\n" + errors.join("\n"));
-  console.log("SMOKE TEST PASSED: page boot, navigation, trip creation, local save, inclusive itinerary dates, trip list, theme toggle.");
+  console.log("SMOKE TEST PASSED: app boot, saved-trip workspace, five-day itinerary, auth gate, trip list, and theme toggle.");
 } finally {
   await browser.close();
 }
