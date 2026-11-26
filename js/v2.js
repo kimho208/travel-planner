@@ -79,14 +79,14 @@ async function callAssistant(action,payload={},timeout=45000){
  return dataJson;
 }
 async function persistTrip(t,{quiet=false}={}){
- if(!t)return;localCache();
- if(!state.user){setSync("이 기기에 저장됨");if(!quiet)toast("이 기기에 저장했습니다. 계정에 로그인하면 다른 기기에서도 이용할 수 있습니다.");return}
+ if(!t)return false;localCache();
+ if(!state.user){setSync("이 기기에 저장됨");if(!quiet)toast("이 기기에 저장했습니다. 계정에 로그인하면 다른 기기에서도 이용할 수 있습니다.");return true}
  setSync("저장 중","busy");
  const row={id:t.id,user_id:state.user.id,destination:t.destination,start_date:t.startDate,end_date:t.endDate,travelers:Number(t.travelers)||1,target_budget:Number(t.targetBudget)||0,travel_style:t.style||"균형 잡힌 여행",transport:t.transport||"대중교통",preferences:{...(t.preferences||{}),overview:t.overview||"",tips:t.tips||[],reservations:t.reservations||[],notes:t.notes||[],savedPlaces:t.savedPlaces||[],recommendations:t.recommendations||[]},itinerary:t.itinerary||[],expenses:{...(t.expenses||{}),items:t.expenseItems||[]},checklist:t.checklist||[],status:t.status||"upcoming",updated_at:new Date().toISOString()};
  let result=t.createdAt?await db.from("trips").update(row).eq("id",t.id).select().single():await db.from("trips").insert(row).select().single();
  if(result.error&&result.error.code==="23505")result=await db.from("trips").update(row).eq("id",t.id).select().single();
- if(result.error){setSync("저장 실패","bad");toast("저장 실패: "+result.error.message);return}
- t.createdAt=result.data.created_at;await syncNormalized(t);localCache();setSync("모든 변경 저장됨");if(!quiet)toast("여행 정보를 저장했습니다.");
+ if(result.error){setSync("저장 실패","bad");toast("저장 실패: "+result.error.message);return false}
+ t.createdAt=result.data.created_at;await syncNormalized(t);localCache();setSync("모든 변경 저장됨");if(!quiet)toast("여행 정보를 저장했습니다.");return true;
 }
 async function syncNormalized(t){
  const days=tripDays(t);const dayRows=days.map((d,i)=>({trip_id:t.id,day_date:d.date,position:i,theme:d.theme||""}));
