@@ -52,3 +52,8 @@ body{font-family:Pretendard,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-ser
 .api-setup-card{margin-top:18px}.api-setup-card ol{line-height:1.9;color:#55645b;font-size:13px}
 .api-setup-card a{display:inline-block;margin:7px 0 10px;color:#245b4d;font-weight:700}
 @media(max-width:700px){.auth-panel{align-items:stretch;flex-direction:column}.auth-controls{flex-direction:column;align-items:stretch}.auth-controls input{min-width:0}.auth-controls button{width:100%}}
+
+.live-map{width:100%;height:230px;border:0;border-radius:12px;background:#edf2ed}
+.map-placeholder{display:flex;flex-direction:column;gap:10px;overflow:hidden}
+.map-placeholder a{color:#245b4d;font-weight:700}
+@media(max-width:700px){.live-map{height:190px}}
