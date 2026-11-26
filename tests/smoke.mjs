@@ -36,6 +36,15 @@ try {
   await page.locator("#page-dashboard").waitFor({ state: "visible", timeout: 15000 });
 
   // Existing trip data renders and navigation works.
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.locator("#menuToggle").click();
+  assert.ok(await page.locator("#sidebar").evaluate(el => el.classList.contains("open")), "Mobile drawer should open");
+  await page.locator("#sidebarScrim").click({ position: { x: 350, y: 400 } });
+  assert.ok(!(await page.locator("#sidebar").evaluate(el => el.classList.contains("open"))), "Scrim should close the drawer");
+  await page.locator("#menuToggle").click();
+  await page.locator("#sidebar [data-route=\"trips\"]").click();
+  assert.ok(!(await page.locator("#sidebar").evaluate(el => el.classList.contains("open"))), "Choosing a route should close the drawer");
+  await page.setViewportSize({ width: 1440, height: 1000 });
   assert.equal(await page.locator("#statTrips").textContent(), "1");
   await page.locator('[data-route="itinerary"]').first().click();
   await page.waitForFunction(() => location.hash === "#itinerary");
@@ -69,15 +78,43 @@ try {
   await page.locator("#authModeToggle").click();
   assert.ok(await page.locator("#authPassword").isVisible(), "Return to login should restore password field");
 
+  // Detailed checklist and expense tracking controls.
+  await page.locator('[data-route="checklist"]').first().click();
+  await page.locator("#ckaddPreset").click();
+  assert.ok(await page.locator(".checklist-task").count() >= 10, "Recommended checklist should add practical travel tasks");
+  await page.locator("#ckname").fill("eSIM 설치 확인");
+  await page.locator("#ckcategory").selectOption("tasks");
+  await page.locator("#ckpriority").selectOption("high");
+  await page.locator("#ckassignee").fill("여행자 1");
+  await page.locator("#ckadd").click();
+  assert.ok(await page.locator(".checklist-task").filter({ hasText: "eSIM 설치 확인" }).count() === 1, "Checklist task should be created");
+  await page.locator('input[data-ck]').first().check();
+  await page.locator('[data-route="budget"]').first().click();
+  await page.locator("#expenseName").fill("공항 리무진");
+  await page.locator("#expenseAmount").fill("24000");
+  await page.locator("#expenseCategory").selectOption("transport");
+  await page.locator("#expenseAdd").click();
+  assert.ok(await page.locator(".expense-row").filter({ hasText: "공항 리무진" }).count() === 1, "Expense should be added");
+  assert.ok(await page.locator(".budget-kpi").count() === 4, "Budget summary should show four financial indicators");
+  const expense = page.locator(".expense-row").filter({ hasText: "공항 리무진" });
+  await expense.locator('[data-expense-edit]').click();
+  await page.locator("#expenseAmount").fill("26000");
+  await page.locator("#expenseAdd").click();
+  assert.ok(await page.locator(".expense-row").filter({ hasText: "₩26,000" }).count() === 1, "Expense edit should update the amount");
+  await page.locator(".expense-row").filter({ hasText: "공항 리무진" }).locator('[data-expense-del]').click();
+  assert.equal(await page.locator(".expense-row").count(), 0, "Expense delete should remove the record");
   // Trip list and theme controls.
   await page.locator('[data-route="trips"]').first().click();
   await page.waitForFunction(() => location.hash === "#trips");
   await page.locator("#allTrips .trip-card").first().waitFor({ state: "visible" });
+  await page.evaluate(() => document.querySelector("#modalBackdrop").classList.add("open"));
+  await page.locator("#modalClose").click();
+  assert.ok(!(await page.locator("#modalBackdrop").evaluate(el => el.classList.contains("open"))), "Modal close button should dismiss the dialog");
   await page.locator("#themeToggle").click();
   assert.equal(await page.locator("html").getAttribute("data-theme"), "dark");
 
   if (errors.length) throw new Error("Browser errors detected:\n" + errors.join("\n"));
-  console.log("SMOKE TEST PASSED: app boot, saved-trip workspace, five-day itinerary, auth gate, trip list, and theme toggle.");
+  console.log("SMOKE TEST PASSED: app boot, mobile drawer close, five-day itinerary, auth gate, checklist CRUD, expense CRUD, modal close, trip list, and theme toggle.");
 } finally {
   await browser.close();
 }

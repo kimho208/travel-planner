@@ -1,9 +1,8 @@
-const CACHE_NAME = "waypoint-v11";
+const CACHE_NAME = "waypoint-v12";
 const ASSETS = [
   "./",
   "./index.html",
   "./css/style.css",
-  "./css/redesign.css",
   "./css/redesign.css",
   "./css/responsive.css",
   "./css/themes.css",
@@ -27,7 +26,7 @@ self.addEventListener("install", (event) => {
 self.addEventListener("activate", (event) => {
   event.waitUntil((async () => {
     const keys = await caches.keys();
-    await Promise.all(keys.filter((key) => key.startsWith("voyage-") && key !== CACHE_NAME).map((key) => caches.delete(key)));
+    await Promise.all(keys.filter((key) => (key.startsWith("voyage-") || key.startsWith("waypoint-")) && key !== CACHE_NAME).map((key) => caches.delete(key)));
     await self.clients.claim();
   })());
 });
