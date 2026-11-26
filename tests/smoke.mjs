@@ -59,7 +59,7 @@ try{
   localStorage.setItem("waypoint-v2-cache",JSON.stringify({trips:[],activeId:null,saved:[]}));
  });
  await ai.goto(baseURL,{waitUntil:"networkidle",timeout:60000});
- await ai.locator("#userLabel").waitFor({timeout:15000});
+ await ai.locator("#authLogout").waitFor({state:"visible",timeout:15000});
  await ai.locator("#newTripTop").click();
  await ai.locator('input[name="destination"]').fill("일본 오사카");
  const start=await ai.locator('input[name="startDate"]').inputValue();
