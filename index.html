@@ -145,7 +145,7 @@
           <article class="settings-card"><h2>데이터 관리</h2><p class="muted">이 브라우저에 저장된 여행 데이터를 삭제합니다. 삭제 전 백업을 권장합니다.</p><button class="danger-btn" id="clearData">모든 여행 데이터 삭제</button></article>
           <article class="settings-card"><h2>연동 상태</h2><div class="integration-row"><span>Supabase 데이터베이스</span><span class="status-pill ready">연결 완료</span></div><div class="integration-row"><span>Gemini AI 추천</span><span class="status-pill pending">키 설정 필요</span></div><div class="integration-row"><span>Google 장소·경로</span><span class="status-pill pending">키 설정 필요</span></div><div class="integration-row"><span>항공·예약 정보</span><span class="status-pill pending">추가 연동 예정</span></div></article>
         </div>
-        <div class="notice info">로그인하면 여행 데이터가 Supabase 클라우드에 저장됩니다. AI와 Google 장소 검색은 각 API 키 설정 후 활성화됩니다.</div>
+        <div class="notice info">로그인하면 여행 데이터가 Supabase 클라우드에 저장됩니다. Gemini와 Google API 키를 등록하면 AI 추천·실제 장소 검색·이동시간 계산이 활성화됩니다.</div><article class="settings-card api-setup-card"><h2>AI·지도 API 설정</h2><p class="muted">아래 두 개의 키를 Supabase Edge Function Secrets에 등록해 주세요. 키는 공개 GitHub 코드에 입력하지 않습니다.</p><ol><li><b>GEMINI_API_KEY</b> — Google AI Studio에서 발급한 Gemini 키</li><li><b>GOOGLE_MAPS_API_KEY</b> — Places API (New)와 Routes API를 활성화한 Google Maps 키</li></ol><a href="https://supabase.com/dashboard/project/ukpywdzvewvsvuirujnr/functions/secrets" target="_blank" rel="noopener">Supabase API 비밀키 설정 열기 ↗</a><p class="muted">Google Maps 키는 웹사이트 리퍼러 제한을 설정하고, Places API와 Routes API만 허용하세요. 사용량 한도도 설정하는 것을 권장합니다.</p></article>
       </section>
 
       <footer class="app-footer"><span>© 2026 Voyage Planner</span><span>AI 추천 · Google 장소 검색 · 클라우드 동기화</span></footer>
