@@ -1,1 +1,26 @@
-[data-theme=dark] .nav-link.active,[data-theme=dark] .nav-link:hover,[data-theme=dark] .filter-tab.active,[data-theme=dark] .theme-choice.active{background:#203e4e}[data-theme=dark] .secondary-btn{background:#203744;color:var(--t)}[data-theme=dark] .notice{background:#1c3948;color:#b8ddeb}
+[data-theme=dark]{
+ --p:#65b394;--bg:#101a16;--s:#17231d;--t:#e7f0e9;--m:#a0b0a5;--l:#2b3c32;
+ --ink:#e7f0e9;--mint:#20362a;--shadow:0 12px 34px rgba(0,0,0,.18);
+}
+[data-theme=dark] body{background:var(--bg);color:var(--t)}
+[data-theme=dark] .sidebar,[data-theme=dark] .wizard-card,[data-theme=dark] .mobile-nav{background:#142019;border-color:#2b3c32}
+[data-theme=dark] .topbar{background:rgba(16,26,22,.9);border-color:#2b3c32}
+[data-theme=dark] .breadcrumb strong,[data-theme=dark] .page-heading h1,[data-theme=dark] .section-head h2,[data-theme=dark] .stat-card strong,[data-theme=dark] .budget-mini strong,[data-theme=dark] .wizard-pane h2,[data-theme=dark] .trip-card h3,[data-theme=dark] .candidate-card h3{color:#e7f0e9}
+[data-theme=dark] .stat-card,[data-theme=dark] .trip-card,[data-theme=dark] .panel,[data-theme=dark] .settings-card,[data-theme=dark] .candidate-card,[data-theme=dark] .checklist-panel,[data-theme=dark] .auth-panel,[data-theme=dark] .budget-mini,[data-theme=dark] .modal{background:#17251d;border-color:#2b3c32}
+[data-theme=dark] .storage-card,[data-theme=dark] .profile-mini{background:#1b2b22;border-color:#2b3c32}
+[data-theme=dark] .nav-link{color:#a2b2a7}
+[data-theme=dark] .nav-link.active,[data-theme=dark] .nav-link:hover,[data-theme=dark] .filter-tab.active,[data-theme=dark] .theme-choice.active{background:#203c2d;color:#a5d5b8}
+[data-theme=dark] .nav-link.active>span{color:#a5d5b8}
+[data-theme=dark] .secondary-btn,[data-theme=dark] .icon-btn,[data-theme=dark] .filter-tabs,[data-theme=dark] .filter-tab,[data-theme=dark] .day-tab,[data-theme=dark] .theme-choice{background:#1c2d23;border-color:#34483a;color:#c5d2c9}
+[data-theme=dark] input,[data-theme=dark] select,[data-theme=dark] textarea,[data-theme=dark] .field input,[data-theme=dark] .field select,[data-theme=dark] .field textarea{background:#142019;border-color:#34483a;color:#e7f0e9}
+[data-theme=dark] .date-range-trigger,[data-theme=dark] .calendar-popover{background:#17251d;border-color:#34483a;color:#e7f0e9}
+[data-theme=dark] .calendar-day{color:#dce8df}
+[data-theme=dark] .calendar-day.in-range,[data-theme=dark] .ai-preview-panel{background:#20362a}
+[data-theme=dark] .choice{background:#17251d;border-color:#34483a}
+[data-theme=dark] .choice b{color:#e1ece4}
+[data-theme=dark] .choice:has(input:checked){background:#20362a;border-color:#65b394}
+[data-theme=dark] .notice{background:#20362a;border-color:#34483a;color:#b9d8c2}
+[data-theme=dark] .integration-row,[data-theme=dark] .wizard-footer,[data-theme=dark] .timeline-item{border-color:#2b3c32;color:#c3d0c7}
+[data-theme=dark] .empty-state{background:#17251d;border-color:#34483a}
+[data-theme=dark] .empty-state h3{color:#dce8df}
+[data-theme=dark] .live-map{border:0}
