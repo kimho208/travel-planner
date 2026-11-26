@@ -345,4 +345,4 @@ async function searchPlaces(e){e.preventDefault();const q=$("#placeQuery").value
 function wireDelegated(){
  document.addEventListener("click",e=>{const tab=e.target.closest("[data-open-tab]");if(tab){setTab(tab.dataset.openTab)}});
 }
-bind();wireDelegated();restoreLocal();if("serviceWorker" in navigator)navigator.serviceWorker.register("./service-worker.js").catch(()=>{});const savedTheme=localStorage.getItem("waypoint-theme");if(savedTheme)document.body.dataset.theme=savedTheme;refreshAuth();bindResetPassword();db.auth.onAuthStateChange((_event,session)=>{state.session=session;state.user=session?.user||null;updateAccountUI();if(session)loadCloudTrips()});
+bind();wireDelegated();restoreLocal();document.documentElement.dataset.appReady="true";if("serviceWorker" in navigator)navigator.serviceWorker.register("./service-worker.js").catch(()=>{});const savedTheme=localStorage.getItem("waypoint-theme");if(savedTheme)document.body.dataset.theme=savedTheme;refreshAuth();bindResetPassword();db.auth.onAuthStateChange((_event,session)=>{state.session=session;state.user=session?.user||null;updateAccountUI();if(session)loadCloudTrips()});
