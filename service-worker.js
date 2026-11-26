@@ -1,20 +1,5 @@
-const CACHE_NAME = "waypoint-v12";
-const ASSETS = [
-  "./",
-  "./index.html",
-  "./css/style.css",
-  "./css/redesign.css",
-  "./css/responsive.css",
-  "./css/themes.css",
-  "./js/app.js",
-  "./js/storage.js",
-  "./js/budget.js",
-  "./js/itinerary.js",
-  "./js/export.js",
-  "./js/api/adapters.js",
-  "./manifest.json",
-  "./assets/icons/icon.svg"
-];
+const CACHE_NAME = "waypoint-v13";
+const ASSETS = [\n  "./",\n  "./index.html",\n  "./css/v2.css",\n  "./js/v2.js",\n  "./manifest.json",\n  "./assets/icons/icon.svg"\n];
 const assetURL = (path) => new URL(path, self.registration.scope).href;
 self.addEventListener("install", (event) => {
   event.waitUntil((async () => {
