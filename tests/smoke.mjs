@@ -8,10 +8,11 @@ const page = await browser.newPage({viewport:{width:1440,height:1000}});
 const errors=[];
 page.on("pageerror",e=>errors.push("PAGE: "+e.message));
 page.on("console",m=>{if(m.type()==="error")errors.push("CONSOLE: "+m.text())});
+page.on("requestfailed",r=>errors.push("REQUEST FAILED: "+r.url()+" "+(r.failure()?.errorText||"")));
 try{
  await page.goto(baseURL,{waitUntil:"networkidle",timeout:60000});
  await page.locator("#view-home.active").waitFor({timeout:15000});
- await page.waitForFunction(()=>document.documentElement.dataset.appReady==="true",null,{timeout:15000});
+ try{await page.waitForFunction(()=>document.documentElement.dataset.appReady==="true",null,{timeout:15000})}catch(e){console.log("BOOT DIAGNOSTICS",JSON.stringify(errors),JSON.stringify(await page.evaluate(()=>({scripts:[...document.scripts].map(x=>x.src),ready:document.documentElement.dataset.appReady,rail:!!document.querySelector("#rail")}))));throw e}
  assert.ok(await page.locator(".home-hero").isVisible(),"New homepage hero must render");
  assert.equal(await page.locator(".rail-link[data-view]").count(),4,"Primary navigation must be present");
  await page.setViewportSize({width:390,height:844});
