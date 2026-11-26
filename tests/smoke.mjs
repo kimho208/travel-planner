@@ -38,6 +38,7 @@ try {
   assert.equal(recovered.trips[0].aiStatus, "error", "An interrupted AI generation must not leave a permanent spinner");
 
   // Existing trip data renders and navigation works.
+  await page.waitForFunction(() => document.querySelector("#statTrips")?.textContent === "1", { timeout: 15000 });
   await page.setViewportSize({ width: 390, height: 844 });
   await page.locator("#menuToggle").click();
   assert.ok(await page.locator("#sidebar").evaluate(el => el.classList.contains("open")), "Mobile drawer should open");
@@ -47,7 +48,6 @@ try {
   await page.locator("#sidebar [data-route=\"trips\"]").click();
   assert.ok(!(await page.locator("#sidebar").evaluate(el => el.classList.contains("open"))), "Choosing a route should close the drawer");
   await page.setViewportSize({ width: 1440, height: 1000 });
-  assert.equal(await page.locator("#statTrips").textContent(), "1");
   await page.locator('[data-route="itinerary"]').first().click();
   await page.waitForFunction(() => location.hash === "#itinerary");
   await page.locator(".trip-planner-grid").waitFor({ state: "visible" });
