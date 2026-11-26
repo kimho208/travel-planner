@@ -1,4 +1,4 @@
-const CACHE_NAME = "waypoint-v13";
+const CACHE_NAME = "waypoint-v14";
 const ASSETS = [\n  "./",\n  "./index.html",\n  "./css/v2.css",\n  "./js/v2.js",\n  "./manifest.json",\n  "./assets/icons/icon.svg"\n];
 const assetURL = (path) => new URL(path, self.registration.scope).href;
 self.addEventListener("install", (event) => {
