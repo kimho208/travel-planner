@@ -1,4 +1,4 @@
-name: Deploy Voyage to GitHub Pages
+name: Deploy WAYPOINT to GitHub Pages
 on:
   push:
     branches: [main]
