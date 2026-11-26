@@ -26,8 +26,11 @@ try {
 
   // 2. Complete the three-step trip wizard
   await page.locator('input[name="destination"]').fill("일본 오사카");
-  await page.locator('input[name="startDate"]').fill("2026-12-23");
-  await page.locator('input[name="endDate"]').fill("2026-12-27");
+  await page.locator("#dateRangeTrigger").click();
+  await page.locator("#calendarNext").click();
+  await page.locator('[data-date="2026-12-23"]').click();
+  await page.locator('[data-date="2026-12-27"]').click();
+  await page.locator('input[name="targetBudget"]').fill("1500000");
   await page.locator("#wizardNext").click();
   await page.locator("#wizardNext").click();
   await page.locator("#wizardNext").click();
@@ -35,6 +38,7 @@ try {
   await page.waitForFunction(() => location.hash === "#itinerary");
   const saved = await page.evaluate(() => JSON.parse(localStorage.getItem("voyage-planner-data-v1") || "null"));
   assert.ok(saved?.trips?.length === 1, "Trip was not saved to localStorage");
+  assert.equal(saved.trips[0].targetBudget, 1500000, "Budget value was not parsed correctly");
   assert.equal(saved.trips[0].itinerary?.length, 5, "A Dec 23–27 trip should contain all five calendar days");
   assert.deepEqual(saved.trips[0].itinerary.map(day => day.date), ["2026-12-23", "2026-12-24", "2026-12-25", "2026-12-26", "2026-12-27"], "Itinerary dates are incorrect");
 
