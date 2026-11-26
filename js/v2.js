@@ -157,8 +157,8 @@ async function enrichTripPlaces(t){
 function renderTrip(){
  const t=current();if(!t){switchView("trips");return}
  $("#topTitle").textContent=t.destination;
- $("#tripHead").innerHTML=`<div><p class="eyebrow">YOUR TRIP WORKSPACE</p><h1>${esc(t.destination)}</h1><p>${formatDateRange(t)} · ${daysCount(t)}일 · ${t.travelers}명 · ${esc(t.transport)}</p></div><div class="trip-head-actions"><button class="button outline" id="editTrip">여행 정보 수정</button><button class="button primary" id="backTrips">내 여행으로</button></div>`;
- $("#editTrip").onclick=()=>editTripModal(t);$("#backTrips").onclick=()=>switchView("trips");
+ $("#tripHead").innerHTML=`<div><p class="eyebrow">YOUR TRIP WORKSPACE</p><h1>${esc(t.destination)}</h1><p>${formatDateRange(t)} · ${daysCount(t)}일 · ${t.travelers}명 · ${esc(t.transport)}</p></div><div class="trip-head-actions"><button class="button outline" id="editTrip">여행 정보 수정</button><button class="button outline" id="completeTrip">여행 완료 처리</button><button class="button primary" id="backTrips">내 여행으로</button><button class="tiny-btn" id="deleteTrip">삭제</button></div>`;
+ $("#editTrip").onclick=()=>editTripModal(t);$("#backTrips").onclick=()=>switchView("trips");$("#completeTrip").onclick=async()=>{t.status=t.status==="completed"?"upcoming":"completed";await persistTrip(t,{quiet:true});renderTrip();toast(t.status==="completed"?"여행을 완료 처리했습니다.":"예정 상태로 변경했습니다.")};$("#completeTrip").textContent=t.status==="completed"?"예정으로 변경":"여행 완료 처리";$("#deleteTrip").onclick=()=>deleteTrip(t.id);
  $$(".trip-tab").forEach(x=>x.classList.toggle("active",x.dataset.tab===state.tab));$$(".trip-panel").forEach(x=>x.classList.toggle("active",x.id==="panel-"+state.tab));
  renderOverview(t);
  if(state.tab==="plan")renderPlan(t);if(state.tab==="discover")renderDiscover(t);if(state.tab==="reservations")renderReservations(t);if(state.tab==="budget")renderBudget(t);if(state.tab==="prep")renderPrep(t);if(state.tab==="notes")renderNotes(t);
