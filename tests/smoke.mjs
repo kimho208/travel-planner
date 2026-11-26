@@ -53,9 +53,21 @@ try {
   await page.locator("#wizardNext").click();
   await page.locator("#wizardNext").click();
   await page.waitForFunction(() => location.hash === "#dashboard");
+  await page.locator("#page-dashboard.active").waitFor({ state: "visible", timeout: 5000 });
+  await page.locator("#authPanel").waitFor({ state: "visible", timeout: 5000 });
   const saved = await page.evaluate(() => JSON.parse(localStorage.getItem("voyage-planner-data-v1") || "null"));
   assert.equal(saved.trips.length, 1, "An unauthenticated placeholder trip should not be created");
-  assert.ok(await page.locator("#authPanel").isVisible(), "Login instructions should be visible");
+  assert.ok(await page.locator("#authPanel").isVisible(), "Account panel should be visible");
+  assert.ok(await page.locator("#authEmail").isVisible(), "Email account ID should be visible");
+  assert.ok(await page.locator("#authPassword").isVisible(), "Password field should be visible");
+  await page.locator("#authModeToggle").click();
+  assert.ok(await page.locator("#authName").isVisible(), "Signup should show a display-name field");
+  await page.locator("#authModeToggle").click();
+  await page.locator("#authForgot").click();
+  assert.ok(await page.locator("#authPassword").isHidden(), "Password field should hide during recovery");
+  assert.equal(await page.locator("#authButton").textContent(), "재설정 이메일 보내기");
+  await page.locator("#authModeToggle").click();
+  assert.ok(await page.locator("#authPassword").isVisible(), "Return to login should restore password field");
 
   // Trip list and theme controls.
   await page.locator('[data-route="trips"]').first().click();
