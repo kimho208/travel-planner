@@ -40,3 +40,15 @@ body{font-family:Pretendard,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-ser
 .calendar-day{height:35px;border:0;border-radius:9px;background:transparent;color:#34443b;font-size:12px}
 .calendar-day:hover{background:#edf4ef}.calendar-day.selected{background:#245b4d;color:white;font-weight:700}.calendar-day.in-range{background:#e7f1e9;border-radius:0}
 .calendar-footer{display:flex;justify-content:space-between;align-items:center;border-top:1px solid #edf0ec;padding-top:12px;margin-top:13px;font-size:11px;color:#68766e}
+
+.auth-panel{display:flex;justify-content:space-between;align-items:center;gap:18px;background:#fff;border:1px solid #e5ebe5;border-radius:16px;padding:18px 22px;margin:18px 0 28px}
+.auth-panel strong{font-size:15px}.auth-panel p{margin:5px 0 0;color:#829087;font-size:12px}
+.auth-controls{display:flex;gap:8px;align-items:center}.auth-controls input{min-width:230px;border:1px solid #dfe7e0;border-radius:9px;padding:12px;font:inherit}
+.ai-preview-panel{display:flex;gap:15px;align-items:center;padding:20px;border:1px solid #dfe9df;border-radius:14px;background:#f5f8f4;margin:22px 0}
+.ai-preview-icon{width:42px;height:42px;border-radius:12px;background:#245b4d;color:white;display:grid;place-items:center;font-weight:800;font-size:20px;flex:none}
+.ai-preview-panel p{color:#748078;font-size:12px;line-height:1.6;margin:6px 0 0}
+.optional-label{font-size:11px;color:#9aa69f;font-weight:400}
+.status-pill.ready{background:#e7f3e9;color:#2d7146}
+.api-setup-card{margin-top:18px}.api-setup-card ol{line-height:1.9;color:#55645b;font-size:13px}
+.api-setup-card a{display:inline-block;margin:7px 0 10px;color:#245b4d;font-weight:700}
+@media(max-width:700px){.auth-panel{align-items:stretch;flex-direction:column}.auth-controls{flex-direction:column;align-items:stretch}.auth-controls input{min-width:0}.auth-controls button{width:100%}}
