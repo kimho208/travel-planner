@@ -43,8 +43,8 @@ try{
   if(route.request().method()==="OPTIONS")return route.fulfill({status:200,headers:{"access-control-allow-origin":origin,"access-control-allow-methods":"GET, POST, PATCH, DELETE, OPTIONS","access-control-allow-headers":"authorization, apikey, content-type, prefer, x-client-info"} ,body:"ok"});
   const url=new URL(route.request().url()),table=url.pathname.split("/").pop();
   if(table==="trips"&&route.request().method()==="GET")return route.fulfill({status:200,contentType:"application/json",headers:{"access-control-allow-origin":origin},body:"[]"});
-  if(table==="trips"&&route.request().method()==="POST"){
-   const payload=route.request().postDataJSON();return route.fulfill({status:201,contentType:"application/json",headers:{"access-control-allow-origin":origin,"content-range":"0-0/*"},body:JSON.stringify({...payload,created_at:new Date().toISOString()})});
+  if(table==="trips"&&["POST","PATCH"].includes(route.request().method())){
+   const payload=route.request().postDataJSON();return route.fulfill({status:route.request().method()==="POST"?201:200,contentType:"application/json",headers:{"access-control-allow-origin":origin,"content-range":"0-0/*"},body:JSON.stringify({...payload,created_at:new Date().toISOString()})});
   }
   if(table==="trip_days"&&route.request().method()==="POST"){
    const payload=route.request().postDataJSON(),rows=Array.isArray(payload)?payload:[payload];return route.fulfill({status:201,contentType:"application/json",headers:{"access-control-allow-origin":origin},body:JSON.stringify(rows.map((x,i)=>({id:"11111111-1111-4111-8111-"+String(i+1).padStart(12,"0"),day_date:x.day_date})))});
