@@ -1,0 +1,163 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#087EBA">
+  <meta name="description" content="여행 일정과 예산을 한곳에서 관리하는 올인원 여행 플래너">
+  <title>Voyage — 올인원 여행 플래너</title>
+  <link rel="manifest" href="./manifest.json">
+  <link rel="icon" href="./assets/icons/icon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="./css/style.css">
+  <link rel="stylesheet" href="./css/responsive.css">
+  <link rel="stylesheet" href="./css/themes.css">
+</head>
+<body>
+  <div class="app-shell">
+    <aside class="sidebar" id="sidebar">
+      <a class="brand" href="#dashboard" aria-label="Voyage 홈">
+        <span class="brand-mark">V</span><span>voyage<span class="brand-dot">.</span></span>
+      </a>
+      <div class="side-label">WORKSPACE</div>
+      <nav class="side-nav" aria-label="주 메뉴">
+        <a href="#dashboard" data-route="dashboard" class="nav-link active"><span>▦</span> 대시보드</a>
+        <a href="#new-trip" data-route="new-trip" class="nav-link"><span>＋</span> 새 여행 만들기</a>
+        <a href="#trips" data-route="trips" class="nav-link"><span>▤</span> 내 여행</a>
+        <a href="#itinerary" data-route="itinerary" class="nav-link"><span>⌖</span> 일정 관리</a>
+        <a href="#discover" data-route="discover" class="nav-link"><span>⌕</span> 호텔·식당</a>
+        <a href="#budget" data-route="budget" class="nav-link"><span>◫</span> 교통·예산</a>
+        <a href="#history" data-route="history" class="nav-link"><span>◷</span> 여행 기록</a>
+        <a href="#checklist" data-route="checklist" class="nav-link"><span>☑</span> 체크리스트</a>
+      </nav>
+      <div class="sidebar-bottom">
+        <div class="storage-card">
+          <span class="storage-icon">▣</span>
+          <div><strong>내 기기에 안전하게 저장</strong><small>브라우저 로컬 저장소 사용</small></div>
+        </div>
+        <a href="#settings" data-route="settings" class="nav-link"><span>⚙</span> 설정</a>
+        <div class="profile-mini"><div class="avatar">여</div><div><strong>여행 플래너</strong><small>개인 워크스페이스</small></div></div>
+      </div>
+    </aside>
+
+    <main class="main-area">
+      <header class="topbar">
+        <button class="icon-btn mobile-menu" id="menuToggle" aria-label="메뉴 열기">☰</button>
+        <div class="breadcrumb"><span>Workspace</span><b>/</b><strong id="pageCrumb">대시보드</strong></div>
+        <div class="top-actions">
+          <span class="local-badge"><i></i> 로컬 저장 모드</span>
+          <button class="icon-btn" id="themeToggle" aria-label="테마 변경">◐</button>
+          <button class="primary-btn small" data-go="new-trip">＋ 새 여행</button>
+        </div>
+      </header>
+
+      <section class="page active" id="page-dashboard">
+        <div class="page-heading">
+          <div><p class="eyebrow">YOUR TRAVEL WORKSPACE</p><h1>여행을 더 똑똑하게 계획하세요.</h1><p class="muted">여행 일정부터 예산까지, 한곳에서 관리할 수 있습니다.</p></div>
+          <button class="primary-btn" data-go="new-trip">＋ 여행 계획 시작하기</button>
+        </div>
+        <div class="hero-panel">
+          <div class="hero-copy"><span class="hero-kicker">PLAN · ORGANIZE · EXPLORE</span><h2>다음 여행의 모든 것,<br>한 화면에서.</h2><p>여행지를 입력하고 나만의 일정을 만들어 보세요.</p><button class="white-btn" data-go="new-trip">새 여행 만들기 <span>→</span></button></div>
+          <div class="hero-art" aria-hidden="true"><div class="sun"></div><div class="mountain mountain-back"></div><div class="mountain mountain-front"></div><div class="route-line"></div><div class="pin pin-one">✦</div><div class="pin pin-two">⌖</div><div class="cloud cloud-one"></div><div class="cloud cloud-two"></div></div>
+        </div>
+        <div class="section-head"><div><h2>여행 현황</h2><p class="muted">저장된 여행 계획을 요약합니다.</p></div><a href="#trips" class="text-link">전체 여행 보기 →</a></div>
+        <div class="stats-grid">
+          <article class="stat-card"><div class="stat-top"><span>전체 여행</span><span class="stat-icon blue">▤</span></div><strong id="statTrips">0</strong><small>저장된 여행</small></article>
+          <article class="stat-card"><div class="stat-top"><span>예정된 여행</span><span class="stat-icon green">⌖</span></div><strong id="statUpcoming">0</strong><small>여행 준비 중</small></article>
+          <article class="stat-card"><div class="stat-top"><span>총 예상 예산</span><span class="stat-icon orange">₩</span></div><strong id="statBudget">₩0</strong><small>저장된 여행 합계</small></article>
+          <article class="stat-card"><div class="stat-top"><span>체크리스트</span><span class="stat-icon purple">☑</span></div><strong id="statChecklist">0%</strong><small>전체 준비 완료율</small></article>
+        </div>
+        <div class="section-head"><div><h2>내 여행</h2><p class="muted">최근 수정한 여행 계획입니다.</p></div></div>
+        <div class="trip-grid" id="dashboardTrips"></div>
+        <div class="empty-state" id="dashboardEmpty"><div class="empty-illustration">✈</div><h3>아직 저장된 여행이 없습니다.</h3><p>첫 여행을 만들어 일정을 계획해 보세요.</p><button class="primary-btn" data-go="new-trip">첫 여행 만들기</button></div>
+      </section>
+
+      <section class="page" id="page-new-trip">
+        <div class="page-heading"><div><p class="eyebrow">CREATE A TRIP</p><h1>새 여행 만들기</h1><p class="muted">몇 가지 정보만 입력하면 여행 계획의 기본 틀이 만들어집니다.</p></div></div>
+        <div class="wizard-layout">
+          <div class="wizard-steps" id="wizardSteps"><div class="wizard-step current"><b>1</b><span>여행 기본 정보</span></div><div class="wizard-step"><b>2</b><span>여행 스타일</span></div><div class="wizard-step"><b>3</b><span>관심 장소와 음식</span></div></div>
+          <form class="wizard-card" id="tripWizard">
+            <div class="wizard-pane active" data-step="0">
+              <span class="step-count">STEP 01 / 03</span><h2>어디로 떠나시나요?</h2><p class="muted">여행의 기본 정보를 입력해 주세요.</p>
+              <div class="form-grid">
+                <label class="field full">여행 국가 및 도시<input name="destination" required placeholder="예: 일본 오사카"></label>
+                <label class="field">출발일<input type="date" name="startDate" required></label>
+                <label class="field">도착일<input type="date" name="endDate" required></label>
+                <label class="field">여행 인원<select name="travelers"><option value="1">1명</option><option value="2" selected>2명</option><option value="3">3명</option><option value="4">4명</option><option value="5">5명</option><option value="6">6명 이상</option></select></label>
+                <label class="field">총 예산 (원)<input type="number" name="targetBudget" min="0" step="10000" placeholder="예: 1500000"></label>
+              </div>
+            </div>
+            <div class="wizard-pane" data-step="1">
+              <span class="step-count">STEP 02 / 03</span><h2>어떤 여행을 원하시나요?</h2><p class="muted">선호하는 여행 스타일과 이동 방식을 선택해 주세요.</p>
+              <div class="choice-grid">
+                <label class="choice"><input type="radio" name="style" value="여유로운 휴식" checked><span class="choice-emoji">🌿</span><b>여유로운 휴식</b><small>느긋하게 둘러보는 여행</small></label>
+                <label class="choice"><input type="radio" name="style" value="맛집·미식"><span class="choice-emoji">🍜</span><b>맛집·미식</b><small>현지 음식과 카페 중심</small></label>
+                <label class="choice"><input type="radio" name="style" value="관광·명소"><span class="choice-emoji">🏛️</span><b>관광·명소</b><small>주요 명소를 알차게 방문</small></label>
+                <label class="choice"><input type="radio" name="style" value="쇼핑"><span class="choice-emoji">🛍️</span><b>쇼핑</b><small>쇼핑과 도심 탐방 중심</small></label>
+              </div>
+              <div class="form-grid one-col"><label class="field">선호 이동 방식<select name="transport"><option>대중교통</option><option>도보 중심</option><option>택시 포함</option><option>렌터카</option><option>상황에 따라 혼합</option></select></label></div>
+            </div>
+            <div class="wizard-pane" data-step="2">
+              <span class="step-count">STEP 03 / 03</span><h2>꼭 하고 싶은 것이 있나요?</h2><p class="muted">장소와 음식은 나중에도 추가하거나 수정할 수 있습니다.</p>
+              <label class="field">가고 싶은 관광지<textarea name="places" rows="3" placeholder="예: 유니버설 스튜디오, 오사카성, 도톤보리"></textarea></label>
+              <label class="field">먹고 싶은 음식<textarea name="foods" rows="3" placeholder="예: 장어덮밥, 스시, 라멘"></textarea></label>
+              <label class="field">추가 요청사항<textarea name="notes" rows="2" placeholder="예: 하루에 너무 많은 일정을 넣지 말아 주세요."></textarea></label>
+              <div class="notice info">현재 버전은 외부 AI·실시간 여행 데이터와 연결되지 않습니다. 입력 내용을 바탕으로 기본 일정 초안을 만들며, 실제 정보는 직접 확인해 주세요.</div>
+            </div>
+            <div class="wizard-footer"><button type="button" class="secondary-btn" id="wizardBack" disabled>이전</button><span id="wizardPage">1 / 3</span><button type="button" class="primary-btn" id="wizardNext">다음 단계 →</button></div>
+          </form>
+        </div>
+      </section>
+
+      <section class="page" id="page-trips">
+        <div class="page-heading"><div><p class="eyebrow">MY TRIPS</p><h1>내 여행</h1><p class="muted">여행 계획을 모아보고 관리하세요.</p></div><button class="primary-btn" data-go="new-trip">＋ 새 여행</button></div>
+        <div class="filter-row"><div class="filter-tabs"><button class="filter-tab active" data-filter="all">전체</button><button class="filter-tab" data-filter="upcoming">예정</button><button class="filter-tab" data-filter="completed">완료</button></div><input id="tripSearch" class="search-input" placeholder="여행지 검색"></div>
+        <div class="trip-grid" id="allTrips"></div><div class="empty-state" id="tripsEmpty"><div class="empty-illustration">✈</div><h3>표시할 여행이 없습니다.</h3><p>새 여행을 만들어 보세요.</p></div>
+      </section>
+
+      <section class="page" id="page-itinerary">
+        <div class="page-heading"><div><p class="eyebrow">ITINERARY</p><h1>일정 관리</h1><p class="muted">선택한 여행의 날짜별 일정을 수정할 수 있습니다.</p></div><select id="itineraryTripSelect" class="select-inline"></select></div>
+        <div id="itineraryContent"></div>
+      </section>
+
+      <section class="page" id="page-discover">
+        <div class="page-heading"><div><p class="eyebrow">STAY & DINE</p><h1>호텔·식당</h1><p class="muted">후보를 비교하고 여행 계획에 추가할 수 있습니다.</p></div><select id="discoverTripSelect" class="select-inline"></select></div>
+        <div class="notice warning">현재 표시되는 후보는 기능 확인용 예시입니다. 실제 업체·가격·평점·예약 가능 여부가 아닙니다.</div>
+        <div class="section-head"><div><h2>숙소 후보 예시</h2><p class="muted">실제 숙소 데이터 API 미연동</p></div></div><div class="candidate-grid" id="hotelCandidates"></div>
+        <div class="section-head"><div><h2>식당 후보 예시</h2><p class="muted">실제 식당 데이터 API 미연동</p></div></div><div class="candidate-grid" id="restaurantCandidates"></div>
+      </section>
+
+      <section class="page" id="page-budget">
+        <div class="page-heading"><div><p class="eyebrow">TRANSPORT & BUDGET</p><h1>교통·예산</h1><p class="muted">여행 비용을 항목별로 관리하고 교통비를 비교합니다.</p></div><select id="budgetTripSelect" class="select-inline"></select></div>
+        <div id="budgetContent"></div>
+      </section>
+
+      <section class="page" id="page-history">
+        <div class="page-heading"><div><p class="eyebrow">TRAVEL ARCHIVE</p><h1>여행 기록</h1><p class="muted">완료한 여행을 보관하고 다시 살펴보세요.</p></div></div>
+        <div class="trip-grid" id="historyTrips"></div><div class="empty-state" id="historyEmpty"><div class="empty-illustration">◷</div><h3>완료된 여행이 없습니다.</h3><p>여행 카드에서 완료 처리할 수 있습니다.</p></div>
+      </section>
+
+      <section class="page" id="page-checklist">
+        <div class="page-heading"><div><p class="eyebrow">TRAVEL CHECKLIST</p><h1>여행 준비 체크리스트</h1><p class="muted">여행별 준비물을 관리하세요.</p></div><select id="checklistTripSelect" class="select-inline"></select></div>
+        <div class="checklist-panel" id="checklistContent"></div>
+      </section>
+
+      <section class="page" id="page-settings">
+        <div class="page-heading"><div><p class="eyebrow">PREFERENCES</p><h1>설정</h1><p class="muted">테마와 여행 데이터 백업을 관리합니다.</p></div></div>
+        <div class="settings-grid">
+          <article class="settings-card"><h2>화면 테마</h2><p class="muted">원하는 화면 테마를 선택하세요.</p><div class="theme-options"><button class="theme-choice active" data-theme="light">☀ 라이트</button><button class="theme-choice" data-theme="dark">◐ 다크</button></div></article>
+          <article class="settings-card"><h2>데이터 백업</h2><p class="muted">여행 데이터는 현재 브라우저에 저장됩니다. 정기적으로 백업해 주세요.</p><div class="button-row"><button class="primary-btn" id="exportBackup">JSON 백업 다운로드</button><label class="secondary-btn file-button">백업 파일 복원<input type="file" id="importBackup" accept=".json,application/json" hidden></label></div></article>
+          <article class="settings-card"><h2>데이터 관리</h2><p class="muted">이 브라우저에 저장된 여행 데이터를 삭제합니다. 삭제 전 백업을 권장합니다.</p><button class="danger-btn" id="clearData">모든 여행 데이터 삭제</button></article>
+          <article class="settings-card"><h2>연동 상태</h2><div class="integration-row"><span>AI 일정 생성</span><span class="status-pill pending">미연동</span></div><div class="integration-row"><span>지도·경로 API</span><span class="status-pill pending">미연동</span></div><div class="integration-row"><span>항공·호텔·식당 데이터</span><span class="status-pill pending">미연동</span></div><div class="integration-row"><span>환율 API</span><span class="status-pill pending">미연동</span></div><div class="integration-row"><span>클라우드 동기화</span><span class="status-pill pending">미연동</span></div></article>
+        </div>
+        <div class="notice info">저장 데이터는 이 브라우저에만 보관됩니다. 브라우저 데이터 삭제 또는 다른 기기 사용 시 자동으로 복구·동기화되지 않습니다.</div>
+      </section>
+
+      <footer class="app-footer"><span>© 2026 Voyage Planner</span><span>개인 기기 저장 · 외부 API 미연동</span></footer>
+    </main>
+  </div>
+  <nav class="mobile-nav" aria-label="모바일 메뉴"><a href="#dashboard" data-route="dashboard">▦<small>홈</small></a><a href="#trips" data-route="trips">▤<small>내 여행</small></a><a href="#new-trip" data-route="new-trip" class="mobile-add">＋<small>새 여행</small></a><a href="#itinerary" data-route="itinerary">⌖<small>일정</small></a><a href="#budget" data-route="budget">◫<small>예산</small></a></nav>
+  <div class="toast-region" id="toastRegion" aria-live="polite"></div>
+  <div class="modal-backdrop" id="modalBackdrop"><div class="modal" role="dialog" aria-modal="true" aria-labelledby="modalTitle"><button class="modal-close" id="modalClose" aria-label="닫기">×</button><div id="modalBody"></div></div></div>
+  <script type="module" src="./js/app.js"></script>
+</body>
+</html>
