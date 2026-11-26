@@ -115,6 +115,71 @@ try {
   await page.locator("#themeToggle").click();
   assert.equal(await page.locator("html").getAttribute("data-theme"), "dark");
 
+
+  // A mocked signed-in session verifies the final wizard action reaches the AI function.
+  const aiPage = await browser.newPage({ viewport: { width: 1280, height: 900 } });
+  const aiErrors = [];
+  const actions = [];
+  aiPage.on("pageerror", error => aiErrors.push(error.message));
+  const origin = new URL(baseURL).origin;
+  await aiPage.route("**/functions/v1/travel-assistant", async route => {
+    if (route.request().method() === "OPTIONS") {
+      return route.fulfill({ status: 200, headers: { "access-control-allow-origin": origin, "access-control-allow-methods": "POST, OPTIONS", "access-control-allow-headers": "authorization, apikey, content-type, x-client-info" }, body: "ok" });
+    }
+    const action = route.request().postDataJSON().action;
+    actions.push(action);
+    const response = action === "status"
+      ? { ok: true, geminiConfigured: true, mapsConfigured: true }
+      : action === "generate"
+        ? { ok: true, itinerary: { overview: "Mock itinerary", recommendations: [{ name: "Test Museum", category: "명소", reason: "Smoke test", query: "Test Museum, Osaka" }], days: [{ date: "2026-12-23", theme: "City day", items: [{ time: "10:00", name: "Test Museum", category: "명소", reason: "Smoke test", query: "Test Museum, Osaka" }] }] } }
+        : { ok: true, places: [{ id: "test-place", name: "Test Museum", address: "1 Test Street, Osaka, Japan", rating: 4.5, ratingCount: 120, mapsUrl: "https://maps.google.com/?q=Test+Museum", location: { latitude: 34.7, longitude: 135.5 } }] };
+    return route.fulfill({ status: 200, contentType: "application/json", headers: { "access-control-allow-origin": origin }, body: JSON.stringify(response) });
+  });
+  await aiPage.route("**/rest/v1/trips**", async route => {
+    if (route.request().method() === "OPTIONS") {
+      return route.fulfill({ status: 200, headers: { "access-control-allow-origin": origin, "access-control-allow-methods": "GET, POST, PATCH, DELETE, OPTIONS", "access-control-allow-headers": "authorization, apikey, content-type, prefer, x-client-info" }, body: "ok" });
+    }
+    return route.fulfill({ status: 200, contentType: "application/json", headers: { "access-control-allow-origin": origin }, body: "[]" });
+  });
+  await aiPage.addInitScript(() => {
+    const now = Math.floor(Date.now() / 1000);
+    const session = {
+      access_token: "mock-access-token",
+      token_type: "bearer",
+      expires_in: 3600,
+      expires_at: now + 3600,
+      refresh_token: "mock-refresh-token",
+      user: {
+        id: "882789dd-2fb8-4bb4-8c05-43570b085631",
+        aud: "authenticated",
+        role: "authenticated",
+        email: "smoke@example.com",
+        app_metadata: { provider: "email", providers: ["email"] },
+        user_metadata: { display_name: "Smoke test" },
+        created_at: new Date().toISOString()
+      }
+    };
+    localStorage.setItem("sb-ukpywdzvewvsvuirujnr-auth-token", JSON.stringify(session));
+    localStorage.setItem("voyage-planner-data-v1", JSON.stringify({ version: 1, activeTripId: null, theme: "light", trips: [] }));
+  });
+  await aiPage.goto(baseURL, { waitUntil: "networkidle", timeout: 60000 });
+  await aiPage.locator("#authSignOut").waitFor({ state: "visible", timeout: 15000 });
+  await aiPage.locator('[data-go="new-trip"]').first().click();
+  await aiPage.locator('input[name="destination"]').fill("일본 오사카");
+  await aiPage.locator("#dateRangeTrigger").click();
+  await aiPage.locator("#calendarNext").click();
+  await aiPage.locator('[data-date="2026-12-23"]').click();
+  await aiPage.locator('[data-date="2026-12-24"]').click();
+  await aiPage.locator("#wizardNext").click();
+  await aiPage.locator("#wizardNext").click();
+  await aiPage.locator("#wizardNext").click();
+  await aiPage.locator(".trip-planner-grid").waitFor({ state: "visible", timeout: 20000 });
+  await aiPage.locator(".plan-stop").filter({ hasText: "Test Museum" }).waitFor({ state: "visible", timeout: 10000 });
+  assert.ok(actions.includes("generate"), "Final create action must invoke the AI generation endpoint");
+  assert.ok(actions.includes("places"), "Generated places should be enriched through Places API");
+  assert.equal(aiErrors.length, 0, "Authenticated AI generation should not cause browser errors");
+  await aiPage.close();
+
   if (errors.length) throw new Error("Browser errors detected:\n" + errors.join("\n"));
   console.log("SMOKE TEST PASSED: app boot, stale-generation recovery, mobile drawer close, five-day itinerary, auth gate, mocked AI generation, checklist CRUD, expense CRUD, modal close, trip list, and theme toggle.");
 } finally {
