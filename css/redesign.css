@@ -122,3 +122,10 @@ body{background:var(--paper);color:var(--ink);font-family:Inter,Pretendard,-appl
 .budget-settlement-row b{font-size:9px}
 .budget-settlement-row b.positive{color:#3e8060}.budget-settlement-row b.negative{color:#c56c57}
 #integrationRefresh{margin-top:12px}
+
+.budget-target-control{display:flex;align-items:end;gap:7px;margin-left:auto}
+.budget-target-control label{display:grid;gap:5px;color:#9aa59e;font-size:9px}
+.budget-target-control input{width:145px;height:34px;padding:0 9px;border:1px solid #e5ebe6;border-radius:7px;background:#fbfcfa;color:#34483e;font-size:10px}
+.budget-target-control button{min-height:34px;padding:0 10px;font-size:9px}
+@media(max-width:700px){.budget-overview-title{align-items:flex-start;flex-wrap:wrap}.budget-target-control{width:100%;margin-left:0}.budget-target-control label{flex:1}.budget-target-control input{width:100%}}
+[data-theme=dark] .budget-target-control input{background:#111c17;border-color:#34453a;color:#e5eee7}
