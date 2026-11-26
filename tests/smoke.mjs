@@ -38,7 +38,10 @@ try {
   assert.equal(recovered.trips[0].aiStatus, "error", "An interrupted AI generation must not leave a permanent spinner");
 
   // Existing trip data renders and navigation works.
-  await page.waitForFunction(() => document.querySelector("#statTrips")?.textContent === "1", { timeout: 15000 });
+  await page.waitForTimeout(1500);
+  const initialDebug = await page.evaluate(() => ({ stat: document.querySelector("#statTrips")?.textContent, state: localStorage.getItem("voyage-planner-data-v1"), appLoaded: !!document.querySelector("script[type=module]") }));
+  console.log("INITIAL DEBUG", JSON.stringify(initialDebug), "BROWSER ERRORS", JSON.stringify(errors));
+  assert.equal(initialDebug.stat, "1", "Dashboard did not render the stored trip count");
   await page.setViewportSize({ width: 390, height: 844 });
   await page.locator("#menuToggle").click();
   assert.ok(await page.locator("#sidebar").evaluate(el => el.classList.contains("open")), "Mobile drawer should open");
