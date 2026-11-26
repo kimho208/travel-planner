@@ -27,13 +27,15 @@ try {
       trips: [{
         id: "smoke-trip", destination: "일본 오사카", startDate: days[0], endDate: days[4],
         travelers: 2, targetBudget: 1500000, style: "관광·명소", transport: "대중교통",
-        status: "upcoming", costs: {}, checklist: [],
+        status: "upcoming", costs: {}, checklist: [], aiStatus: "generating",
         itinerary: days.map((date, i) => ({ date, theme: "오사카 탐방", items: [{ time: "10:00", name: "테스트 장소 " + (i + 1) }] }))
       }]
     }));
   });
   await page.goto(baseURL, { waitUntil: "networkidle", timeout: 60000 });
   await page.locator("#page-dashboard").waitFor({ state: "visible", timeout: 15000 });
+  const recovered = await page.evaluate(() => JSON.parse(localStorage.getItem("voyage-planner-data-v1") || "null"));
+  assert.equal(recovered.trips[0].aiStatus, "error", "An interrupted AI generation must not leave a permanent spinner");
 
   // Existing trip data renders and navigation works.
   await page.setViewportSize({ width: 390, height: 844 });
@@ -114,7 +116,7 @@ try {
   assert.equal(await page.locator("html").getAttribute("data-theme"), "dark");
 
   if (errors.length) throw new Error("Browser errors detected:\n" + errors.join("\n"));
-  console.log("SMOKE TEST PASSED: app boot, mobile drawer close, five-day itinerary, auth gate, checklist CRUD, expense CRUD, modal close, trip list, and theme toggle.");
+  console.log("SMOKE TEST PASSED: app boot, stale-generation recovery, mobile drawer close, five-day itinerary, auth gate, mocked AI generation, checklist CRUD, expense CRUD, modal close, trip list, and theme toggle.");
 } finally {
   await browser.close();
 }
