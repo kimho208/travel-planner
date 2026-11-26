@@ -38,6 +38,7 @@ try{
   if(action==="route")body={ok:true,duration:"600s",distanceMeters:1200,encodedPolyline:"}_ilE}~qpX?gE"};
   return route.fulfill({status:200,contentType:"application/json",headers:{"access-control-allow-origin":origin},body:JSON.stringify(body)});
  });
+ await ai.route("https://api.frankfurter.dev/**",async route=>route.fulfill({status:200,contentType:"application/json",body:JSON.stringify({amount:1,base:"JPY",date:"2026-11-25",rates:{KRW:9.3}})}));
  await ai.route("**/rest/v1/**",async route=>{
   if(route.request().method()==="OPTIONS")return route.fulfill({status:200,headers:{"access-control-allow-origin":origin,"access-control-allow-methods":"GET, POST, PATCH, DELETE, OPTIONS","access-control-allow-headers":"authorization, apikey, content-type, prefer, x-client-info"} ,body:"ok"});
   const url=new URL(route.request().url()),table=url.pathname.split("/").pop();
