@@ -1,0 +1,3 @@
+export const COST_LABELS={flight:"항공권",hotel:"숙박",food:"식비",transport:"교통비",tickets:"입장료",other:"기타"};
+export function tripTotal(trip){return Object.values(trip.costs||{}).reduce((sum,n)=>sum+(Number(n)||0),0);}
+export function transportEstimate(trip){const stops=(trip.itinerary||[]).reduce((n,d)=>n+(d.items?.length||0),0);const segments=Math.max(0,stops-(trip.itinerary?.length||1));const perRide=trip.transport==="택시 포함"?1800:trip.transport==="렌터카"?2300:260;const individual=segments*perRide*(trip.travelers||1);const pass=(trip.destination||"").includes("일본")?Math.max(0,trip.travelers||1)*6500:individual*0.82;return {segments,individual,pass,recommended:pass<individual?"pass":"ic"};}
