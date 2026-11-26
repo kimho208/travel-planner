@@ -1,0 +1,1 @@
+create index if not exists trip_stops_day_trip_fk_idx on public.trip_stops(day_id, trip_id);
