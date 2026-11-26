@@ -1,8 +1,6 @@
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2.119.2";
-
 const SUPABASE_URL="https://ukpywdzvewvsvuirujnr.supabase.co";
 const SUPABASE_KEY="sb_publishable_sSrnespomiRYE0P3wfkX_w_ardc0wun";
-const db=createClient(SUPABASE_URL,SUPABASE_KEY);
+const db=window.supabase.createClient(SUPABASE_URL,SUPABASE_KEY);
 const $=s=>document.querySelector(s), $$=s=>[...document.querySelectorAll(s)];
 const money=n=>"₩"+Math.round(Number(n)||0).toLocaleString("ko-KR");
 const esc=s=>String(s??"").replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
