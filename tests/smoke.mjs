@@ -35,6 +35,8 @@ try {
   await page.waitForFunction(() => location.hash === "#itinerary");
   const saved = await page.evaluate(() => JSON.parse(localStorage.getItem("voyage-planner-data-v1") || "null"));
   assert.ok(saved?.trips?.length === 1, "Trip was not saved to localStorage");
+  assert.equal(saved.trips[0].itinerary?.length, 5, "A Dec 23–27 trip should contain all five calendar days");
+  assert.deepEqual(saved.trips[0].itinerary.map(day => day.date), ["2026-12-23", "2026-12-24", "2026-12-25", "2026-12-26", "2026-12-27"], "Itinerary dates are incorrect");
 
   // 3. Trip list route and card rendering
   await page.locator('[data-route="trips"]').first().click();
@@ -47,7 +49,7 @@ try {
   assert.equal(theme, "dark", "Theme toggle did not switch to dark mode");
 
   if (errors.length) throw new Error("Browser errors detected:\n" + errors.join("\n"));
-  console.log("SMOKE TEST PASSED: page boot, navigation, trip creation, local save, trip list, theme toggle.");
+  console.log("SMOKE TEST PASSED: page boot, navigation, trip creation, local save, inclusive itinerary dates, trip list, theme toggle.");
 } finally {
   await browser.close();
 }
