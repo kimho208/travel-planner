@@ -62,6 +62,31 @@ function jsonFromText(text: string) {
   if (start < 0 || end <= start) throw new Error("AI 응답에서 JSON 일정을 찾지 못했습니다.");
   return JSON.parse(clean.slice(start, end + 1));
 }
+
+let amadeusCache: { token: string; expiresAt: number; base: string } | null = null;
+async function amadeusAccessToken() {
+  const clientId = Deno.env.get("AMADEUS_CLIENT_ID"), clientSecret = Deno.env.get("AMADEUS_CLIENT_SECRET");
+  if (!clientId || !clientSecret) throw new Error("Amadeus API 설정이 필요합니다. Supabase Secrets에 AMADEUS_CLIENT_ID와 AMADEUS_CLIENT_SECRET을 등록해 주세요.");
+  const base = Deno.env.get("AMADEUS_ENV") === "production" ? "https://api.amadeus.com" : "https://test.api.amadeus.com";
+  if (amadeusCache && amadeusCache.base === base && amadeusCache.expiresAt > Date.now() + 60000) return { token: amadeusCache.token, base };
+  const form = new URLSearchParams({ grant_type: "client_credentials", client_id: clientId, client_secret: clientSecret });
+  const response = await fetch(base + "/v1/security/oauth2/token", { method: "POST", headers: { "Content-Type": "application/x-www-form-urlencoded" }, body: form, signal: AbortSignal.timeout(12000) });
+  const data = await response.json().catch(() => ({}));
+  if (!response.ok || !data.access_token) throw new Error(data?.error_description || data?.error || "Amadeus 인증에 실패했습니다. API 키와 환경 설정을 확인해 주세요.");
+  amadeusCache = { token: data.access_token, expiresAt: Date.now() + Number(data.expires_in || 1800) * 1000, base };
+  return { token: data.access_token, base };
+}
+async function amadeusGet(path: string, params: Record<string, string>) {
+  const { token, base } = await amadeusAccessToken();
+  const url = new URL(base + path);
+  for (const [key, value] of Object.entries(params)) if (value !== "") url.searchParams.set(key, value);
+  const response = await fetch(url, { headers: { Authorization: "Bearer " + token, Accept: "application/vnd.amadeus+json" }, signal: AbortSignal.timeout(25000) });
+  const data = await response.json().catch(() => ({}));
+  if (!response.ok) { const detail = data?.errors?.[0]?.detail || data?.errors?.[0]?.title || data?.error_description || "Amadeus 검색 요청에 실패했습니다."; throw new Error(detail + " (HTTP " + response.status + ")"); }
+  return data;
+}
+function validDate(value: unknown) { return typeof value === "string" && /^\\d{4}-\\d{2}-\\d{2}$/.test(value) && Number.isFinite(Date.parse(value + "T00:00:00Z")); }
+
 Deno.serve(async (req: Request) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: cors });
   const origin = req.headers.get("origin") || "";
@@ -73,7 +98,7 @@ Deno.serve(async (req: Request) => {
   const action = String(body.action || "");
   console.info("[travel-assistant] action:", action);
   // A status response contains only booleans, never key values. It is intentionally available before sign-in.
-  if (action === "status") return reply({ ok: true, geminiConfigured: !!Deno.env.get("GEMINI_API_KEY"), mapsConfigured: !!Deno.env.get("GOOGLE_MAPS_API_KEY") });
+  if (action === "status") return reply({ ok: true, geminiConfigured: !!Deno.env.get("GEMINI_API_KEY"), mapsConfigured: !!Deno.env.get("GOOGLE_MAPS_API_KEY"), amadeusConfigured: !!Deno.env.get("AMADEUS_CLIENT_ID") && !!Deno.env.get("AMADEUS_CLIENT_SECRET"), amadeusEnvironment: Deno.env.get("AMADEUS_ENV") === "production" ? "production" : "test" });
   const auth = req.headers.get("authorization") || "";
   if (!auth.startsWith("Bearer ")) return reply({ error: "로그인이 필요합니다." }, 401);
   const supabaseUrl = Deno.env.get("SUPABASE_URL"), anonKey = Deno.env.get("SUPABASE_ANON_KEY");
@@ -82,6 +107,64 @@ Deno.serve(async (req: Request) => {
   try { userCheck = await fetch(`${supabaseUrl}/auth/v1/user`, { headers: { apikey: anonKey, Authorization: auth } }); }
   catch { return reply({ error: "로그인 세션 확인 서버에 연결하지 못했습니다." }, 502); }
   if (!userCheck.ok) return reply({ error: "로그인 세션이 만료되었습니다. 다시 로그인해 주세요." }, 401);
+
+
+  if (action === "flight-search") {
+    if (!Deno.env.get("AMADEUS_CLIENT_ID") || !Deno.env.get("AMADEUS_CLIENT_SECRET")) return reply({ error: "항공편 실시간 검색을 사용하려면 Supabase Secrets에 AMADEUS_CLIENT_ID와 AMADEUS_CLIENT_SECRET을 등록해야 합니다.", setupRequired: ["AMADEUS_CLIENT_ID", "AMADEUS_CLIENT_SECRET"] }, 424);
+    const origin = String(body.origin || "").trim().toUpperCase(), destination = String(body.destination || "").trim().toUpperCase();
+    const departureDate = body.departureDate, returnDate = body.returnDate ? String(body.returnDate) : "";
+    const adults = Math.max(1, Math.min(9, Number(body.adults) || 1)), children = Math.max(0, Math.min(8, Number(body.children) || 0));
+    if (!/^[A-Z]{3}$/.test(origin) || !/^[A-Z]{3}$/.test(destination)) return reply({ error: "출발·도착 공항은 3자리 IATA 코드로 입력해 주세요." }, 400);
+    if (!validDate(departureDate) || (returnDate && (!validDate(returnDate) || returnDate <= String(departureDate)))) return reply({ error: "출발일 또는 귀국일이 올바르지 않습니다." }, 400);
+    const travelClass = ["ECONOMY","PREMIUM_ECONOMY","BUSINESS","FIRST"].includes(String(body.travelClass)) ? String(body.travelClass) : "ECONOMY";
+    try {
+      const params: Record<string, string> = { originLocationCode: origin, destinationLocationCode: destination, departureDate: String(departureDate), adults: String(adults), currencyCode: "KRW", max: "20", travelClass, nonStop: String(body.nonStop === true) };
+      if (returnDate) params.returnDate = returnDate;
+      if (children > 0) params.children = String(children);
+      const data = await amadeusGet("/v2/shopping/flight-offers", params);
+      const carriers = data.dictionaries?.carriers || {};
+      const flights = (data.data || []).map((offer: Record<string, any>) => {
+        const itineraries = (offer.itineraries || []).map((it: Record<string, any>) => {
+          const segments = (it.segments || []).map((seg: Record<string, any>) => ({ from: seg.departure?.iataCode || "", to: seg.arrival?.iataCode || "", departureAt: seg.departure?.at || "", arrivalAt: seg.arrival?.at || "", carrier: seg.carrierCode || "", carrierName: carriers[seg.carrierCode] || seg.carrierCode || "", flightNumber: (seg.carrierCode || "") + (seg.number || ""), duration: seg.duration || "" }));
+          return { duration: it.duration || "", segments };
+        });
+        const segments = itineraries.flatMap((it: Record<string, any>) => it.segments);
+        return { offerId: offer.id || "", price: Number(offer.price?.grandTotal || offer.price?.total || 0), currency: offer.price?.currency || "KRW", airlineNames: [...new Set(segments.map((s: Record<string, any>) => s.carrierName))].join(", "), flightNumbers: segments.map((s: Record<string, any>) => s.flightNumber).join(" / "), duration: itineraries.map((it: Record<string, any>) => it.duration).join(" · "), stops: Math.max(0, ...itineraries.map((it: Record<string, any>) => Math.max(0, it.segments.length - 1))), legs: segments, itineraries };
+      });
+      return reply({ ok: true, provider: "Amadeus", environment: Deno.env.get("AMADEUS_ENV") === "production" ? "production" : "test", flights });
+    } catch (error) { return reply({ error: error instanceof Error ? error.message : "항공편 검색에 실패했습니다." }, 502); }
+  }
+  if (action === "hotel-search") {
+    if (!Deno.env.get("AMADEUS_CLIENT_ID") || !Deno.env.get("AMADEUS_CLIENT_SECRET")) return reply({ error: "숙소 실시간 요금 검색을 사용하려면 Supabase Secrets에 AMADEUS_CLIENT_ID와 AMADEUS_CLIENT_SECRET을 등록해야 합니다.", setupRequired: ["AMADEUS_CLIENT_ID", "AMADEUS_CLIENT_SECRET"] }, 424);
+    const cityInput = String(body.city || "").trim(), checkInDate = String(body.checkInDate || ""), checkOutDate = String(body.checkOutDate || "");
+    const adults = Math.max(1, Math.min(9, Number(body.adults) || 1)), rooms = Math.max(1, Math.min(8, Number(body.rooms) || 1));
+    if (!cityInput || cityInput.length > 100 || !validDate(checkInDate) || !validDate(checkOutDate) || checkOutDate <= checkInDate) return reply({ error: "도시와 체크인·체크아웃 날짜를 올바르게 입력해 주세요." }, 400);
+    try {
+      let cityCode = cityInput.toUpperCase(), cityName = cityInput;
+      if (!/^[A-Z]{3}$/.test(cityCode)) {
+        const found = await amadeusGet("/v1/reference-data/locations", { subType: "CITY", keyword: cityInput, "page[limit]": "5", view: "LIGHT" });
+        const match = (found.data || []).find((x: Record<string, any>) => x.iataCode);
+        if (!match) return reply({ error: "도시 코드를 찾지 못했습니다. 영문 도시명 또는 3자리 IATA 도시 코드를 입력해 주세요." }, 404);
+        cityCode = match.iataCode; cityName = match.name || cityInput;
+      }
+      const list = await amadeusGet("/v1/reference-data/locations/hotels/by-city", { cityCode, radius: "20", radiusUnit: "KM", hotelSource: "ALL" });
+      const hotels = (list.data || []).slice(0, 20);
+      if (!hotels.length) return reply({ ok: true, provider: "Amadeus", environment: Deno.env.get("AMADEUS_ENV") === "production" ? "production" : "test", cityCode, cityName, hotels: [] });
+      const ids = hotels.map((h: Record<string, any>) => h.hotelId).filter(Boolean);
+      const offersData = await amadeusGet("/v3/shopping/hotel-offers", { hotelIds: ids.join(","), adults: String(adults), checkInDate, checkOutDate, roomQuantity: String(rooms), currency: String(body.currency || "KRW").toUpperCase(), bestRateOnly: "true" });
+      const hotelsById = new Map(hotels.map((h: Record<string, any>) => [h.hotelId, h]));
+      const results = (offersData.data || []).map((entry: Record<string, any>) => {
+        const h = entry.hotel || {}, source = hotelsById.get(h.hotelId) || {};
+        const offer = (entry.offers || []).slice().sort((a: Record<string, any>, b: Record<string, any>) => Number(a.price?.total || Infinity) - Number(b.price?.total || Infinity))[0];
+        if (!offer) return null;
+        const policies = offer.policies || {}, cancellation = policies.cancellations || [];
+        const refundable = cancellation.some((x: Record<string, any>) => String(x.type || "").toUpperCase().includes("REFUND"));
+        const board = String(offer.boardType || "").toUpperCase();
+        return { hotelId: h.hotelId || source.hotelId || "", offerId: offer.id || "", name: h.name || source.name || "숙소", address: [h.address?.lines?.join(" "), h.address?.cityName || cityName, h.address?.countryCode].filter(Boolean).join(", "), rating: Number(h.rating || source.rating || 0), price: Number(offer.price?.total || 0), currency: offer.price?.currency || String(body.currency || "KRW").toUpperCase(), room: offer.room?.description?.text || offer.room?.typeEstimated?.category || "객실 정보 확인 필요", refundable, breakfast: board.includes("BREAKFAST"), checkInDate, checkOutDate };
+      }).filter(Boolean).sort((a: Record<string, any>, b: Record<string, any>) => a.price - b.price);
+      return reply({ ok: true, provider: "Amadeus", environment: Deno.env.get("AMADEUS_ENV") === "production" ? "production" : "test", cityCode, cityName, hotels: results });
+    } catch (error) { return reply({ error: error instanceof Error ? error.message : "숙소 검색에 실패했습니다." }, 502); }
+  }
 
   if (action === "generate") {
     const apiKey = Deno.env.get("GEMINI_API_KEY");
