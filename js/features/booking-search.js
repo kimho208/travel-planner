@@ -33,7 +33,7 @@
       <datalist id="wp-flight-airports"></datalist><div class="wp-search-status" id="wp-search-status" aria-live="polite">검색을 시작하면 공급자 API의 실제 결과가 여기에 표시됩니다.</div>
       <div class="wp-filter-row" id="wp-hotel-filters" hidden><label>최대 1박 요금<input id="wp-max-price" type="text" inputmode="numeric" placeholder="제한 없음"></label><label>최소 등급<select id="wp-min-rating"><option value="0">전체</option><option value="3">3성급 이상</option><option value="4">4성급 이상</option><option value="5">5성급</option></select></label><label>정렬<select id="wp-hotel-sort"><option value="price">가격 낮은 순</option><option value="rating">등급 높은 순</option></select></label><label class="wp-check"><input id="wp-refundable" type="checkbox"> 무료 취소 조건만</label></div>
       <div id="wp-search-results" class="wp-search-results"></div>
-      <div class="wp-provider-note">검색 공급자: Amadeus Self-Service API. API 키가 설정되지 않았거나 계정의 상품 권한이 없는 경우 결과가 표시되지 않습니다. Agoda·Trip.com 직접 요금 비교 및 결제 API는 제휴 승인이 별도로 필요합니다.</div>`;
+      <div class="wp-provider-note">검색 공급자: Amadeus Self-Service API. API 키가 설정되지 않았거나 계정의 상품 권한이 없는 경우 결과가 표시되지 않습니다. Agoda·Trip.com 직접 요금 비교 및 결제 API는 제휴 승인이 별도로 필요합니다. <a href="https://www.agoda.com/" target="_blank" rel="noopener">Agoda 공식 사이트</a> · <a href="https://www.trip.com/" target="_blank" rel="noopener">Trip.com 공식 사이트</a></div>`;
     host.prepend(section);
     const flightForm=$(section,"#wp-flight-form"),hotelForm=$(section,"#wp-hotel-form"),status=$(section,"#wp-search-status"),results=$(section,"#wp-search-results"),filters=$(section,"#wp-hotel-filters");
     let active="flight",hotelData=[];

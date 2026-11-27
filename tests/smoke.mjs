@@ -178,6 +178,9 @@ try{
  await ai.locator(".wp-result-card").filter({hasText:"Korean Air"}).waitFor();
  assert.ok(actions.includes("flight-search"),"Flight search should call the supplier API");
  await ai.locator("[data-search-tab=hotel]").click();
+ const hotelOut=await ai.locator("#wp-hotel-form input[name=checkOutDate]").inputValue();
+ const hotelIn=await ai.locator("#wp-hotel-form input[name=checkInDate]").inputValue();
+ if(hotelOut<=hotelIn){const d=new Date(hotelIn+"T00:00:00");d.setDate(d.getDate()+1);await ai.locator("#wp-hotel-form input[name=checkOutDate]").fill(d.toISOString().slice(0,10));}
  await ai.locator("#wp-hotel-form").locator("button[type=submit]").click();
  await ai.locator(".wp-result-card").filter({hasText:"WAYPOINT Test Hotel"}).waitFor();
  assert.ok(actions.includes("hotel-search"),"Hotel search should call the supplier API");
