@@ -369,12 +369,9 @@ function renderDiscover(t){
  $$("[data-add-recommend]").forEach(b=>b.onclick=()=>addRecommendation(t,b.dataset.addRecommend));
 }
 function placeCard(p){return `<article class="place-card"><div><h4>${esc(p.name)}</h4><p>${esc(p.address||p.area||p.reason||p.category||"추천 장소")}</p><span class="rating">${p.rating?"★ "+p.rating+" ("+(p.ratingCount||0)+")":""}</span></div><div class="place-actions"><button class="tiny-btn" data-add-recommend="${esc(p.name)}">일정에 추가</button><button class="tiny-btn" data-save-place="${esc(p.name)}">저장</button>${p.mapsUrl?'<a class="tiny-btn" href="'+esc(p.mapsUrl)+'" target="_blank" rel="noopener">지도 보기</a>':""}</div></article>`}
-async function searchPlaces(e){
  e.preventDefault();const q=$("#placeQuery").value.trim();$("#placeSearchResults").innerHTML='<div class="empty-small">장소를 검색하고 있습니다…</div>';
  try{const r=await callAssistant("places",{query:q},18000);state.lastSearch=r.places||[];$("#placeSearchResults").innerHTML=state.lastSearch.map(p=>placeCard({...p,reason:p.address})).join("")||'<div class="empty-small">검색 결과가 없습니다.</div>';$$("[data-add-recommend]").forEach(b=>b.onclick=()=>addPlaceFromSearch(b.dataset.addRecommend))}catch(err){$("#placeSearchResults").innerHTML='<div class="notice">'+esc(err.message)+'</div>'}
 }
-function addPlaceFromSearch(name){const t=current();const d=tripDays(t)[state.day]||tripDays(t)[0];if(!d){toast("먼저 일정을 만들어 주세요.");return}const p=(state.lastSearch||[]).find(x=>x.name===name);d.items.push({id:uid(),name,time:"",address:p?.address||"",location:p?.location,placeId:p?.id,rating:p?.rating,mapsUrl:p?.mapsUrl,category:"장소",source:"places",verified:!!p});persistTrip(t,{quiet:true});setTab("plan");toast("일정에 추가했습니다.")}
-function addRecommendation(t,name){
  const p=(t.recommendations||[]).find(x=>x.name===name);const d=tripDays(t)[state.day]||tripDays(t)[0];if(!d){toast("먼저 날짜별 일정을 만들어 주세요.");return}
  d.items.push({id:uid(),name:p.name,time:"",category:p.category,reason:p.reason,query:p.query,source:"recommendation"});persistTrip(t,{quiet:true});setTab("plan");enrichTripPlaces(t).then(()=>persistTrip(t,{quiet:true}));
 }
