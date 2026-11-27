@@ -61,6 +61,16 @@ try{
  assert.ok(storeNotifications>0,"Central store must notify subscribers about nested state changes");
  assert.ok(await offline.locator(".home-hero").isVisible(),"Offline-only startup must render homepage");
  assert.ok(await offline.locator("#createHero").isVisible(),"Offline-only mode must retain local trip creation");
+ const attachmentCheck=await offline.evaluate(async()=>{
+  const file=new File(["WAYPOINT reservation test"],"confirmation.pdf",{type:"application/pdf"});
+  const saved=await window.WaypointFiles.save("trip-test",file),listed=await window.WaypointFiles.list("trip-test"),loaded=await window.WaypointFiles.get(saved.id);
+  await window.WaypointFiles.remove(saved.id);
+  return {name:saved.name,count:listed.length,blob:loaded.blob.size};
+ });
+ assert.deepEqual(attachmentCheck,{name:"confirmation.pdf",count:1,blob:24},"Reservation files should persist privately in IndexedDB");
+ const calendarCheck=await offline.evaluate(()=>window.WaypointPlanning.makeICS({id:"t",itinerary:[{date:"2026-12-23",items:[{id:"s",name:"Osaka Castle",time:"10:00",endTime:"11:00"}]}]}));
+ assert.ok(calendarCheck.includes("DTSTART;TZID=Asia/Seoul:20261223T100000"),"Calendar export should contain local start time");
+ assert.ok(calendarCheck.includes("SUMMARY:Osaka Castle"),"Calendar export should include event title");
  assert.ok(await offline.locator("#authForm").evaluate(el=>el.hidden),"Authentication form must be disabled without Supabase SDK");
  await offline.locator("#createHero").click();
  assert.ok(await offline.locator("#createTripForm").isVisible(),"Offline-only trip creation form opens");
