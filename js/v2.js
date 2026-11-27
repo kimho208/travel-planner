@@ -194,7 +194,7 @@ function makeOfflineTemplate(t,notes=""){
 }
 async function createTrip(e){
  e.preventDefault();if(state.loading)return;
- const f=new FormData(e.currentTarget),t={id:uid(),destination:String(f.get("destination")).trim(),startDate:f.get("startDate"),endDate:f.get("endDate"),travelers:Number(f.get("travelers")),targetBudget:Number(f.get("budget"))||0,transport:f.get("transport"),style:f.get("style"),styles:f.getAll("styles"),budgetLevel:f.get("budgetLevel")||"balanced",hotelArea:String(f.get("hotelArea")||"").trim(),status:"upcoming",itinerary:[],expenseItems:[],expenses:{},reservations:[],checklist:[],notes:[],recommendations:[],savedPlaces:[],preferences:{},tips:[]};
+ const f=new FormData(e.currentTarget),t={id:uid(),destination:String(f.get("destination")).trim(),startDate:f.get("startDate"),endDate:f.get("endDate"),travelers:Number(f.get("travelers")),targetBudget:Number(String(f.get("budget")||"").replace(/[^0-9]/g,""))||0,transport:f.get("transport"),style:f.get("style")||"균형 잡힌 여행",styles:f.getAll("styles"),budgetLevel:f.get("budgetLevel")||"balanced",hotelArea:String(f.get("hotelArea")||"").trim(),departureAirport:String(f.get("departureAirport")||"").trim().toUpperCase(),arrivalAirport:String(f.get("arrivalAirport")||"").trim().toUpperCase(),adults:Number(f.get("adults"))||Number(f.get("travelers"))||1,children:Number(f.get("children"))||0,infants:Number(f.get("infants"))||0,accommodation:f.get("accommodation")||"hotel",rooms:Number(f.get("rooms"))||1,hotelRating:f.get("hotelRating")||"any",cabin:f.get("cabin")||"ECONOMY",flightPreference:f.get("flightPreference")||"balanced",hotelPreference:f.get("hotelPreference")||"location",hotelGuests:Number(f.get("hotelGuests"))||Number(f.get("travelers"))||1,pace:f.get("pace")||"balanced",mealBudget:f.get("mealBudget")||"mixed",arrivalPlan:f.get("arrivalPlan")||"flexible",status:"upcoming",itinerary:[],expenseItems:[],expenses:{},reservations:[],checklist:[],notes:[],recommendations:[],savedPlaces:[],preferences:{},tips:[]};
  if(!t.destination){toast("여행지를 입력해 주세요.");return}
  if(t.endDate<t.startDate){toast("도착일은 출발일 이후여야 합니다.");return}
  if(!state.user){
@@ -205,7 +205,7 @@ async function createTrip(e){
  }
  state.loading=true;$("#submitCreate").disabled=true;$("#submitCreate").textContent="일정 구성 중…";setSync("AI 일정 생성 중","busy");
  try{
- const ai=await callAssistant("generate",{trip:{destination:t.destination,startDate:t.startDate,endDate:t.endDate,travelers:t.travelers,targetBudget:t.targetBudget,transport:t.transport,style:t.style,styles:t.styles,budgetLevel:t.budgetLevel,hotelArea:t.hotelArea,notes:f.get("notes")||""}},55000);
+ const ai=await callAssistant("generate",{trip:{destination:t.destination,startDate:t.startDate,endDate:t.endDate,travelers:t.travelers,targetBudget:t.targetBudget,transport:t.transport,style:t.style,styles:t.styles,budgetLevel:t.budgetLevel,hotelArea:t.hotelArea,departureAirport:t.departureAirport,arrivalAirport:t.arrivalAirport,adults:t.adults,children:t.children,infants:t.infants,accommodation:t.accommodation,rooms:t.rooms,hotelRating:t.hotelRating,cabin:t.cabin,flightPreference:t.flightPreference,hotelPreference:t.hotelPreference,hotelGuests:t.hotelGuests,pace:t.pace,mealBudget:t.mealBudget,arrivalPlan:t.arrivalPlan,notes:f.get("notes")||""}},55000);
  if(ai.itinerary.suggestedDestination)t.destination=ai.itinerary.suggestedDestination;
  t.overview=ai.itinerary.overview||"";t.tips=ai.itinerary.tips||[];
  t.recommendations=ai.itinerary.recommendations||[];
@@ -394,6 +394,7 @@ function renderReservations(t){
  const items=reservations(t).slice().sort((a,b)=>new Date(a.departureAt||a.checkInAt||a.arrivalAt||a.checkOutAt||"9999-12-31").getTime()-new Date(b.departureAt||b.checkInAt||b.arrivalAt||b.checkOutAt||"9999-12-31").getTime());
  $("#panel-reservations").innerHTML=`<div class="section-title"><div><span class="eyebrow">BOOKING DETAILS</span><h2>예약 정보</h2></div><button class="button primary" id="addReservation">＋ 예약 추가</button></div><div class="notice">예약은 출발·도착·체크인 시간 순으로 정렬합니다. 시간은 현재 기기의 시간대로 표시되며, 항공편 실시간 운항 상태 조회는 별도 항공 데이터 제공업체 연동이 필요합니다.</div><div class="reservation-grid">${items.map(reservationCard).join("")||'<div class="empty-small">등록된 예약이 없습니다. 항공권이나 숙소 정보를 추가해 보세요.</div>'}</div><div class="surface" style="margin-top:16px"><h3>예약 확인서에서 정보 가져오기</h3><p class="muted">PDF, JPG, PNG 파일을 선택하면 항공편·숙소 정보를 추출해 입력 양식에 채웁니다.</p><input id="reservationFile" type="file" accept=".pdf,image/png,image/jpeg,image/webp"><div id="extractStatus" class="muted"></div></div><div id="reservationAttachments" class="surface" style="margin-top:16px"></div>`;
  renderReservationAttachments(t);
+ window.WaypointBookingSearch?.mount(t,{request:callAssistant,persist:persistTrip,refresh:()=>renderReservations(t)});
  $("#addReservation").onclick=()=>reservationModal(t);
  $("#reservationFile").onchange=e=>extractReservation(e.target.files?.[0],t);
  $$("[data-res-edit]").forEach(b=>b.onclick=()=>reservationModal(t,b.dataset.resEdit));
