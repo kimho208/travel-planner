@@ -251,6 +251,45 @@ function renderMap(t,d){
  if(points.length>1){const bounds=L.latLngBounds(points.map(s=>[s.location.latitude,s.location.longitude]));state.map.fitBounds(bounds.pad(.18))}
  setTimeout(()=>state.map?.invalidateSize(),120);
 }
+function moveStopBy(t,dayIndex,id,delta){
+ const list=dayStops(tripDays(t)[dayIndex]),index=list.findIndex(x=>x.id===id),next=index+delta;
+ if(index<0||next<0||next>=list.length)return;
+ state.routeUndo={tripId:t.id,dayIndex,items:JSON.parse(JSON.stringify(list))};
+ const [item]=list.splice(index,1);list.splice(next,0,item);persistTrip(t,{quiet:true});renderPlan(t);
+}
+function moveStopToDay(t,id,targetDay){
+ const sourceIndex=tripDays(t).findIndex(d=>dayStops(d).some(x=>x.id===id));
+ if(sourceIndex<0||targetDay<0||targetDay>=tripDays(t).length||sourceIndex===targetDay)return;
+ const source=dayStops(tripDays(t)[sourceIndex]),index=source.findIndex(x=>x.id===id),[item]=source.splice(index,1);
+ dayStops(tripDays(t)[targetDay]).push(item);state.day=targetDay;state.routeUndo={tripId:t.id,dayIndex:targetDay,items:null};
+ persistTrip(t,{quiet:true});renderPlan(t);toast("다른 날짜로 일정을 이동했습니다.");
+}
+function moveStopModal(t,id){
+ const source=tripDays(t).findIndex(d=>dayStops(d).some(x=>x.id===id));if(source<0)return;
+ openModal('<p class="eyebrow">MOVE ITINERARY</p><h2>일정을 다른 날짜로 이동</h2><form id="moveStopForm"><label class="field">이동할 날짜<select name="target">'+tripDays(t).map((d,i)=>'<option value="'+i+'" '+(i===source?'disabled':'')+'>DAY '+(i+1)+' · '+esc(d.date)+'</option>').join("")+'</select></label><div class="modal-actions"><button type="button" class="button outline" id="cancelMove">취소</button><button class="button primary">이동</button></div></form>');
+ $("#cancelMove").onclick=closeModal;$("#moveStopForm").onsubmit=e=>{e.preventDefault();const target=Number(new FormData(e.currentTarget).get("target"));closeModal();moveStopToDay(t,id,target)};
+}
+function optimizeDayRoute(t,dayIndex){
+ const items=dayStops(tripDays(t)[dayIndex]),located=items.filter(x=>x.location&&Number.isFinite(Number(x.location.latitude))&&Number.isFinite(Number(x.location.longitude)));
+ if(located.length<2){toast("실제 좌표가 확인된 장소가 두 곳 이상 있어야 동선을 최적화할 수 있습니다.");return}
+ state.routeUndo={tripId:t.id,dayIndex,items:JSON.parse(JSON.stringify(items))};
+ const optimized=window.WaypointPlanning.optimizeByNearestNeighbor(items);
+ tripDays(t)[dayIndex].items=optimized;persistTrip(t,{quiet:true});renderPlan(t);
+ toast("첫 장소를 출발점으로 두고 가까운 장소 순서로 정렬했습니다. 최단 경로 보장은 아니며, 이동 경로를 다시 계산해 주세요.");
+}
+function undoRouteChange(t){
+ const undo=state.routeUndo;if(!undo||undo.tripId!==t.id||undo.dayIndex!==state.day||!undo.items){toast("되돌릴 수 있는 변경 내역이 없습니다.");return}
+ tripDays(t)[undo.dayIndex].items=undo.items;state.routeUndo=null;persistTrip(t,{quiet:true});renderPlan(t);toast("일정 순서를 되돌렸습니다.");
+}
+function exportTripCalendar(t){
+ const blob=new Blob([window.WaypointPlanning.makeICS(t)],{type:"text/calendar;charset=utf-8"}),url=URL.createObjectURL(blob),a=document.createElement("a");
+ a.href=url;a.download=(t.destination||"waypoint-trip").replace(/[^a-z0-9가-힣_-]/gi,"-")+".ics";a.click();setTimeout(()=>URL.revokeObjectURL(url),1000);toast("캘린더 파일을 만들었습니다.");
+}
+function printTripPlan(t){
+ const rows=tripDays(t).map((d,i)=>'<section><h2>DAY '+(i+1)+' · '+esc(d.date)+'</h2><ul>'+dayStops(d).map(x=>'<li><b>'+esc(x.time||"")+' '+esc(x.name)+'</b><br>'+esc(x.address||"")+'<br>'+esc(x.note||"")+'</li>').join("")+'</ul></section>').join("");
+ const w=window.open("","_blank");if(!w){toast("인쇄 창이 차단되었습니다. 팝업을 허용해 주세요.");return}
+ w.document.write('<!doctype html><html lang="ko"><meta charset="utf-8"><title>'+esc(t.destination)+' 여행 일정</title><style>body{font-family:Arial,sans-serif;max-width:800px;margin:40px auto;color:#26332c}h1{border-bottom:2px solid #ccd8d0;padding-bottom:12px}li{margin:12px 0;line-height:1.6}section{break-inside:avoid}</style><h1>'+esc(t.destination)+' 여행 일정</h1><p>'+esc(t.startDate)+' – '+esc(t.endDate)+' · '+t.travelers+'명</p>'+rows+'<script>window.onload=()=>window.print()<\/script></html>');w.document.close();
+}
 function decodePolyline(encoded){
  let index=0,lat=0,lng=0,coords=[];while(index<encoded.length){let b,shift=0,result=0;do{b=encoded.charCodeAt(index++)-63;result|=(b&0x1f)<<shift;shift+=5}while(b>=0x20);const dlat=result&1?~(result>>1):(result>>1);lat+=dlat;shift=0;result=0;do{b=encoded.charCodeAt(index++)-63;result|=(b&0x1f)<<shift;shift+=5}while(b>=0x20);const dlng=result&1?~(result>>1):(result>>1);lng+=dlng;coords.push([lat/1e5,lng/1e5])}return coords;
 }
@@ -278,8 +317,8 @@ function addStopModal(t,dayIndex){
 }
 function editStopModal(t,dayIndex,id){
  const s=dayStops(tripDays(t)[dayIndex]).find(x=>x.id===id);if(!s)return;
- openModal(`<p class="eyebrow">EDIT STOP</p><h2>장소 정보 수정</h2><form id="editStopForm"><div class="modal-grid"><label class="field">장소 이름<input name="name" value="${esc(s.name)}" required></label><label class="field">방문 시간<input name="time" type="time" value="${esc(s.time||"")}"></label><label class="field">주소<input name="address" value="${esc(s.address||"")}"></label><label class="field">예상 비용<input name="cost" type="number" value="${Number(s.cost)||0}"></label><label class="field">메모<input name="note" value="${esc(s.note||"")}"></label></div><div class="modal-actions"><button type="button" class="button outline" id="cancelEditStop">취소</button><button class="button primary">저장</button></div></form>`);
- $("#cancelEditStop").onclick=closeModal;$("#editStopForm").onsubmit=async e=>{e.preventDefault();const f=new FormData(e.currentTarget);Object.assign(s,{name:f.get("name"),time:f.get("time"),address:f.get("address"),cost:Number(f.get("cost"))||0,note:f.get("note")});closeModal();await persistTrip(t,{quiet:true});renderTrip();toast("장소 정보를 저장했습니다.")};
+ openModal(`<p class="eyebrow">EDIT STOP</p><h2>장소 정보 수정</h2><form id="editStopForm"><div class="modal-grid"><label class="field">장소 이름<input name="name" value="${esc(s.name)}" required></label><label class="field">방문 시작<input name="time" type="time" value="${esc(s.time||"")}"></label><label class="field">방문 종료<input name="endTime" type="time" value="${esc(s.endTime||"")}"></label><label class="field">예상 소요 시간(분)<input name="durationMinutes" type="number" min="0" value="${Number(s.durationMinutes)||0}"></label><label class="field">주소<input name="address" value="${esc(s.address||"")}"></label><label class="field">예상 비용<input name="cost" type="number" value="${Number(s.cost)||0}"></label><label class="field">메모<input name="note" value="${esc(s.note||"")}"></label></div><div class="modal-actions"><button type="button" class="button outline" id="cancelEditStop">취소</button><button class="button primary">저장</button></div></form>`);
+ $("#cancelEditStop").onclick=closeModal;$("#editStopForm").onsubmit=async e=>{e.preventDefault();const f=new FormData(e.currentTarget);Object.assign(s,{name:f.get("name"),time:f.get("time"),endTime:f.get("endTime"),durationMinutes:Number(f.get("durationMinutes"))||0,address:f.get("address"),cost:Number(f.get("cost"))||0,note:f.get("note")});closeModal();await persistTrip(t,{quiet:true});renderTrip();toast("장소 정보를 저장했습니다.")};
 }
 async function removeStop(t,dayIndex,id){if(!confirm("이 장소를 일정에서 삭제할까요?"))return;tripDays(t)[dayIndex].items=dayStops(tripDays(t)[dayIndex]).filter(x=>x.id!==id);await db.from("trip_stops").delete().eq("id",id);await persistTrip(t,{quiet:true});renderPlan(t);toast("일정에서 삭제했습니다.")}
 function renderDiscover(t){
