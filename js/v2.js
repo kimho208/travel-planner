@@ -23,7 +23,8 @@ const uid=()=>globalThis.crypto?.randomUUID?crypto.randomUUID():"wp-"+Date.now()
 const dateText=d=>d?new Date(d+"T00:00:00").toLocaleDateString("ko-KR",{month:"long",day:"numeric",weekday:"short"}):"";
 const today=()=>new Date().toISOString().slice(0,10);
 const addDays=(d,n)=>{const x=new Date(d+"T00:00:00");x.setDate(x.getDate()+n);return x.toISOString().slice(0,10)};
-const state={user:null,session:null,trips:[],activeId:null,view:"home",tab:"overview",day:0,filter:"all",map:null,markers:[],routeLayers:[],saved:(()=>{const value=parseStored("waypoint-v2-saved",[]);return Array.isArray(value)?value:[]})(),rates:{},rateDate:null,loading:false,dragId:null};
+const store=window.WaypointStore.createStore({user:null,session:null,trips:[],activeId:null,view:"home",tab:"overview",day:0,filter:"all",map:null,markers:[],routeLayers:[],saved:(()=>{const value=parseStored("waypoint-v2-saved",[]);return Array.isArray(value)?value:[]})(),rates:{},rateDate:null,loading:false,dragId:null});
+const state=store.getState();
 let mapResizeObserver=null;
 function toast(message){const el=document.createElement("div");el.className="toast";el.textContent=message;$("#toasts").append(el);setTimeout(()=>el.remove(),3800)}
 function setSync(label,kind="ok"){$("#syncState").innerHTML='<i style="background:'+(kind==="busy"?"#d79a56":kind==="bad"?"#c56b61":"#71a88b")+'"></i>'+esc(label)}
