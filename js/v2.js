@@ -16,7 +16,7 @@ const db=(()=>{try{return supabaseAvailable?window.supabase.createClient(SUPABAS
 const safeGet=(key,fallback=null)=>{try{const value=localStorage.getItem(key);return value===null?fallback:value}catch(error){console.warn("로컬 저장소 읽기 실패:",error);return fallback}};
 const safeSet=(key,value)=>{try{localStorage.setItem(key,value);return true}catch(error){console.warn("로컬 저장소 쓰기 실패:",error);return false}};
 const parseStored=(key,fallback)=>{try{const raw=safeGet(key);return raw===null?fallback:JSON.parse(raw)}catch(error){console.warn("저장 데이터 형식 오류:",key,error);return fallback}};
-const $=s=>document.querySelector(s), $=s=>[...document.querySelectorAll(s)];
+const $=s=>document.querySelector(s), $$=s=>[...document.querySelectorAll(s)];
 const money=n=>"₩"+Math.round(Number(n)||0).toLocaleString("ko-KR");
 const esc=s=>String(s??"").replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
 const uid=()=>globalThis.crypto?.randomUUID?crypto.randomUUID():"wp-"+Date.now().toString(36)+"-"+Math.random().toString(36).slice(2,11);
