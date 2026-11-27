@@ -1,14 +1,17 @@
 const SUPABASE_URL="https://ukpywdzvewvsvuirujnr.supabase.co";
 const SUPABASE_KEY="sb_publishable_sSrnespomiRYE0P3wfkX_w_ardc0wun";
-const db=window.supabase.createClient(SUPABASE_URL,SUPABASE_KEY);
-const $=s=>document.querySelector(s), $$=s=>[...document.querySelectorAll(s)];
+const db=(()=>{try{return window.supabase?.createClient?window.supabase.createClient(SUPABASE_URL,SUPABASE_KEY):null}catch(error){console.warn("Supabase 초기화 실패:",error);return null}})();
+const safeGet=(key,fallback=null)=>{try{const value=localStorage.getItem(key);return value===null?fallback:value}catch(error){console.warn("로컬 저장소 읽기 실패:",error);return fallback}};
+const safeSet=(key,value)=>{try{localStorage.setItem(key,value);return true}catch(error){console.warn("로컬 저장소 쓰기 실패:",error);return false}};
+const parseStored=(key,fallback)=>{try{const raw=safeGet(key);return raw===null?fallback:JSON.parse(raw)}catch(error){console.warn("저장 데이터 형식 오류:",key,error);return fallback}};
+const $=s=>document.querySelector(s), $=s=>[...document.querySelectorAll(s)];
 const money=n=>"₩"+Math.round(Number(n)||0).toLocaleString("ko-KR");
 const esc=s=>String(s??"").replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
-const uid=()=>crypto.randomUUID();
+const uid=()=>globalThis.crypto?.randomUUID?crypto.randomUUID():"wp-"+Date.now().toString(36)+"-"+Math.random().toString(36).slice(2,11);
 const dateText=d=>d?new Date(d+"T00:00:00").toLocaleDateString("ko-KR",{month:"long",day:"numeric",weekday:"short"}):"";
 const today=()=>new Date().toISOString().slice(0,10);
 const addDays=(d,n)=>{const x=new Date(d+"T00:00:00");x.setDate(x.getDate()+n);return x.toISOString().slice(0,10)};
-const state={user:null,session:null,trips:[],activeId:null,view:"home",tab:"overview",day:0,filter:"all",map:null,markers:[],routeLayers:[],saved:JSON.parse(localStorage.getItem("waypoint-v2-saved")||"[]"),rates:{},rateDate:null,loading:false,dragId:null};
+const state={user:null,session:null,trips:[],activeId:null,view:"home",tab:"overview",day:0,filter:"all",map:null,markers:[],routeLayers:[],saved:(()=>{const value=parseStored("waypoint-v2-saved",[]);return Array.isArray(value)?value:[]})(),rates:{},rateDate:null,loading:false,dragId:null};
 let mapResizeObserver=null;
 function toast(message){const el=document.createElement("div");el.className="toast";el.textContent=message;$("#toasts").append(el);setTimeout(()=>el.remove(),3800)}
 function setSync(label,kind="ok"){$("#syncState").innerHTML='<i style="background:'+(kind==="busy"?"#d79a56":kind==="bad"?"#c56b61":"#71a88b")+'"></i>'+esc(label)}
@@ -29,12 +32,30 @@ function normalizeTrip(row){
  for(const d of itinerary)for(const s of dayStops(d))stopId(s);
  return {id:row.id,destination:row.destination,startDate:row.start_date,endDate:row.end_date,travelers:row.travelers||1,targetBudget:Number(row.target_budget)||0,style:row.travel_style||"균형 잡힌 여행",transport:row.transport||"대중교통",preferences:row.preferences||{},itinerary,expenses:row.expenses||{},expenseItems:Array.isArray(row.expenses?.items)?row.expenses.items:[],checklist:Array.isArray(row.checklist)?row.checklist:[],reservations:Array.isArray(row.preferences?.reservations)?row.preferences.reservations:[],notes:Array.isArray(row.preferences?.notes)?row.preferences.notes:[],savedPlaces:Array.isArray(row.preferences?.savedPlaces)?row.preferences.savedPlaces:[],recommendations:Array.isArray(row.preferences?.recommendations)?row.preferences.recommendations:[],status:row.status||"upcoming",overview:row.preferences?.overview||"",tips:row.preferences?.tips||[],createdAt:row.created_at};
 }
-function localCache(){try{localStorage.setItem("waypoint-v2-cache",JSON.stringify({trips:state.trips,activeId:state.activeId,saved:state.saved}))}catch{}}
-function restoreLocal(){try{const x=JSON.parse(localStorage.getItem("waypoint-v2-cache")||"null");if(x){state.trips=x.trips||[];state.activeId=x.activeId||null;state.saved=x.saved||state.saved}}catch{}}
+const LOCAL_SCHEMA_VERSION=2;
+function localCache(){return safeSet("waypoint-v2-cache",JSON.stringify({schemaVersion:LOCAL_SCHEMA_VERSION,trips:state.trips,activeId:state.activeId,saved:state.saved,updatedAt:new Date().toISOString()}))}
+function restoreLocal(){
+ const x=parseStored("waypoint-v2-cache",null);
+ if(!x||typeof x!=="object"||Array.isArray(x))return false;
+ // Version 0 is the original cache shape; migrate it in memory without discarding trips.
+ if(!Array.isArray(x.trips))return false;
+ state.trips=x.trips.filter(t=>t&&typeof t==="object"&&typeof t.id==="string"&&typeof t.destination==="string");
+ state.activeId=typeof x.activeId==="string"&&state.trips.some(t=>t.id===x.activeId)?x.activeId:(state.trips[0]?.id||null);
+ state.saved=Array.isArray(x.saved)?x.saved:state.saved;
+ if(x.schemaVersion!==LOCAL_SCHEMA_VERSION)localCache();
+ return true;
+}
 async function refreshAuth(){
- const {data}=await db.auth.getSession();state.session=data.session;state.user=data.session?.user||null;
- updateAccountUI();
- if(state.user)await loadCloudTrips();else{restoreLocal();renderAll()}
+ if(!db){state.session=null;state.user=null;restoreLocal();updateAccountUI();setSync("기기 저장 · 온라인 계정 연결 불가","bad");renderAll();return}
+ try{
+  const {data,error}=await db.auth.getSession();
+  if(error)throw error;
+  state.session=data.session;state.user=data.session?.user||null;
+  updateAccountUI();
+  if(state.user)await loadCloudTrips();else{restoreLocal();renderAll()}
+ }catch(error){
+  console.error("인증 초기화 실패:",error);state.session=null;state.user=null;restoreLocal();updateAccountUI();setSync("기기 저장 · 계정 연결 오류","bad");renderAll();
+ }
 }
 function updateAccountUI(){
  const logged=!!state.user;
@@ -42,7 +63,8 @@ function updateAccountUI(){
  $("#userSub").textContent=logged?state.user.email:"계정에 여행 저장";
  $("#userAvatar").textContent=(state.user?.user_metadata?.display_name||state.user?.email||"W").slice(0,1).toUpperCase();
  $("#signOut").hidden=!logged;$("#authLogout").hidden=!logged;$("#authForm").hidden=logged;
- $("#accountInfo").textContent=logged?state.user.email+" 계정으로 동기화 중입니다.":"로그인하면 여행 데이터가 계정에 동기화됩니다.";
+ $("#accountInfo").textContent=logged?state.user.email+" 계정으로 동기화 중입니다.":(db?"로그인하면 여행 데이터가 계정에 동기화됩니다.":"온라인 계정 연결을 사용할 수 없습니다. 여행 정보는 이 기기에 저장됩니다.");
+ $("#authForm").hidden=!db||logged;
  $("#connectionBadge")?.remove();
 }
 async function loadCloudTrips(){
@@ -318,7 +340,20 @@ async function authSubmit(){
 async function forgotPassword(){const email=$("#authEmail").value.trim();if(!email){toast("비밀번호 재설정 메일을 받을 이메일을 입력해 주세요.");return}const {error}=await db.auth.resetPasswordForEmail(email,{redirectTo:location.origin+location.pathname+"?reset=1"});toast(error?"요청 실패: "+error.message:"비밀번호 재설정 이메일을 보냈습니다.")}
 function setAuthMode(mode){$$("[data-auth-mode]").forEach(x=>x.classList.toggle("active",x.dataset.authMode===mode));$("#authNameWrap").hidden=mode!=="signup";$("#authSubmit").textContent=mode==="signup"?"회원가입":"로그인"}
 async function saveBackup(){const blob=new Blob([JSON.stringify({version:2,trips:state.trips,saved:state.saved},null,2)],{type:"application/json"});const a=document.createElement("a");a.href=URL.createObjectURL(blob);a.download="waypoint-backup-"+today()+".json";a.click();URL.revokeObjectURL(a.href)}
-async function restoreBackup(file){try{const x=JSON.parse(await file.text());if(!Array.isArray(x.trips))throw new Error("백업 파일 형식이 올바르지 않습니다.");state.trips=x.trips;state.saved=x.saved||[];localCache();renderAll();toast("백업을 복원했습니다. 로그인 상태라면 여행별로 저장해 주세요.")}catch(e){toast("복원 실패: "+e.message)}}
+async function restoreBackup(file){
+ if(!file)return;
+ try{
+  if(file.size>10*1024*1024)throw new Error("백업 파일은 10MB 이하만 복원할 수 있습니다.");
+  const x=JSON.parse(await file.text());
+  if(!x||typeof x!=="object"||!Array.isArray(x.trips))throw new Error("백업 파일 형식이 올바르지 않습니다.");
+  const validTrips=x.trips.filter(t=>t&&typeof t==="object"&&typeof t.id==="string"&&typeof t.destination==="string"&&Array.isArray(t.itinerary||[]));
+  if(validTrips.length!==x.trips.length)throw new Error("여행 데이터에 올바르지 않은 항목이 포함되어 있습니다. 기존 데이터는 유지했습니다.");
+  if(x.saved!==undefined&&!Array.isArray(x.saved))throw new Error("저장 장소 데이터 형식이 올바르지 않습니다.");
+  state.trips=validTrips;state.saved=x.saved||[];state.activeId=state.trips[0]?.id||null;
+  if(!localCache())throw new Error("기기의 저장 공간에 기록하지 못했습니다. 저장 공간을 확인해 주세요.");
+  renderAll();toast("백업을 복원했습니다. 로그인 상태라면 여행별로 저장해 주세요.");
+ }catch(e){toast("복원 실패: "+e.message)}
+}
 async function deleteTrip(id){if(!confirm("이 여행을 삭제할까요? 관련 일정·지출·예약·메모도 함께 삭제됩니다."))return;const t=state.trips.find(x=>x.id===id);if(state.user){const {error}=await db.from("trips").delete().eq("id",id);if(error){toast("삭제 실패: "+error.message);return}}state.trips=state.trips.filter(x=>x.id!==id);if(state.activeId===id)state.activeId=state.trips[0]?.id||null;localCache();renderTrips();renderHome();switchView("trips");toast("여행을 삭제했습니다.")}
 function bind(){
  $$("[data-view]").forEach(b=>b.onclick=()=>switchView(b.dataset.view));
@@ -326,9 +361,9 @@ function bind(){
  ["#createHero","#heroCreate","#emptyCreate","#newTripTop","#createTrips"].forEach(s=>$(s).onclick=createTripModal);
  $("#menuOpen").onclick=()=>{$("#rail").classList.add("open");$("#scrim").classList.add("open")};$("#scrim").onclick=()=>{$("#rail").classList.remove("open");$("#scrim").classList.remove("open")};
  $("#modalClose").onclick=closeModal;$("#modalBackdrop").onclick=e=>{if(e.target.id==="modalBackdrop")closeModal()};document.addEventListener("keydown",e=>{if(e.key==="Escape"){closeModal();$("#rail").classList.remove("open");$("#scrim").classList.remove("open")}});
- document.body.addEventListener("click",e=>{const card=e.target.closest("[data-open-trip]");if(card)openTrip(card.dataset.openTrip);const savedAdd=e.target.closest("#savedPlaces [data-add-recommend]");if(savedAdd&&current())addRecommendation(current(),savedAdd.dataset.addRecommend);const save=e.target.closest("[data-save-place]");if(save){const name=save.dataset.savePlace;const p=[...(state.lastSearch||[]),...(current()?.recommendations||[])].find(x=>x.name===name);if(p&&!state.saved.some(x=>x.name===name)){state.saved.push(p);localStorage.setItem("waypoint-v2-saved",JSON.stringify(state.saved));toast("저장한 장소에 추가했습니다.")}else if(p)toast("이미 저장한 장소입니다.")}});
+ document.body.addEventListener("click",e=>{const card=e.target.closest("[data-open-trip]");if(card)openTrip(card.dataset.openTrip);const savedAdd=e.target.closest("#savedPlaces [data-add-recommend]");if(savedAdd&&current())addRecommendation(current(),savedAdd.dataset.addRecommend);const save=e.target.closest("[data-save-place]");if(save){const name=save.dataset.savePlace;const p=[...(state.lastSearch||[]),...(current()?.recommendations||[])].find(x=>x.name===name);if(p&&!state.saved.some(x=>x.name===name)){state.saved.push(p);safeSet("waypoint-v2-saved",JSON.stringify(state.saved));toast("저장한 장소에 추가했습니다.")}else if(p)toast("이미 저장한 장소입니다.")}});
  $$("[data-trip-filter]").forEach(b=>b.onclick=()=>{state.filter=b.dataset.tripFilter;$$("[data-trip-filter]").forEach(x=>x.classList.toggle("active",x===b));renderTrips()});
- $("#tripSearch").oninput=renderTrips;$("#themeToggle").onclick=()=>{document.body.dataset.theme=document.body.dataset.theme==="dark"?"light":"dark";localStorage.setItem("waypoint-theme",document.body.dataset.theme)};$$("[data-theme-choice]").forEach(b=>b.onclick=()=>{document.body.dataset.theme=b.dataset.themeChoice;localStorage.setItem("waypoint-theme",b.dataset.themeChoice)});
+ $("#tripSearch").oninput=renderTrips;$("#themeToggle").onclick=()=>{document.body.dataset.theme=document.body.dataset.theme==="dark"?"light":"dark";safeSet("waypoint-theme",document.body.dataset.theme)};$$("[data-theme-choice]").forEach(b=>b.onclick=()=>{document.body.dataset.theme=b.dataset.themeChoice;safeSet("waypoint-theme",b.dataset.themeChoice)});
  $$("[data-auth-mode]").forEach(b=>b.onclick=()=>setAuthMode(b.dataset.authMode));$("#authSubmit").onclick=authSubmit;$("#forgotPassword").onclick=forgotPassword;$("#signOut").onclick=async()=>{await db.auth.signOut();state.user=null;state.session=null;updateAccountUI();setSync("기기 저장");toast("로그아웃했습니다.")};$("#authLogout").onclick=$("#signOut").onclick;
  $("#exportData").onclick=saveBackup;$("#importData").onchange=e=>restoreBackup(e.target.files?.[0]);$("#tripSearch").oninput=renderTrips;
 }
@@ -343,4 +378,20 @@ async function searchPlaces(e){e.preventDefault();const q=$("#placeQuery").value
 function wireDelegated(){
  document.addEventListener("click",e=>{const tab=e.target.closest("[data-open-tab]");if(tab){setTab(tab.dataset.openTab)}});
 }
-bind();wireDelegated();restoreLocal();document.documentElement.dataset.appReady="true";if("serviceWorker" in navigator)navigator.serviceWorker.register("./service-worker.js").catch(()=>{});const savedTheme=localStorage.getItem("waypoint-theme");if(savedTheme)document.body.dataset.theme=savedTheme;refreshAuth();bindResetPassword();db.auth.onAuthStateChange((_event,session)=>{state.session=session;state.user=session?.user||null;updateAccountUI();if(session)loadCloudTrips()});
+function boot(){
+ try{
+  bind();wireDelegated();restoreLocal();
+  const savedTheme=safeGet("waypoint-theme");if(savedTheme==="light"||savedTheme==="dark")document.body.dataset.theme=savedTheme;
+  bindResetPassword();
+  document.documentElement.dataset.appReady="true";
+  if("serviceWorker" in navigator)navigator.serviceWorker.register("./service-worker.js").catch(error=>console.warn("오프라인 캐시 등록 실패:",error));
+  refreshAuth();
+  if(db)db.auth.onAuthStateChange((_event,session)=>{state.session=session;state.user=session?.user||null;updateAccountUI();if(session)loadCloudTrips()});
+ }catch(error){
+  console.error("WAYPOINT 시작 오류:",error);
+  const notice=document.createElement("div");notice.setAttribute("role","alert");notice.style.cssText="position:fixed;z-index:99999;left:16px;right:16px;bottom:16px;padding:16px;border-radius:12px;background:#7b302b;color:white;box-shadow:0 8px 30px #0003";
+  notice.textContent="화면을 시작하는 중 문제가 발생했습니다. 페이지를 새로고침해 주세요. ("+(error?.message||"알 수 없는 오류")+")";document.body.append(notice);
+  document.documentElement.dataset.appReady="error";
+ }
+}
+boot();
