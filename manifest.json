@@ -2,11 +2,11 @@
   "name": "WAYPOINT 올인원 여행 플래너",
   "short_name": "WAYPOINT",
   "description": "여행 일정과 예산을 관리하는 여행 플래너",
-  "start_url": "./index.html#dashboard",
+  "start_url": "./index.html",
   "scope": "./",
   "display": "standalone",
-  "background_color": "#EAF6FC",
-  "theme_color": "#087EBA",
+  "background_color": "#f7f8f6",
+  "theme_color": "#f7f8f6",
   "icons": [
     {
       "src": "./assets/icons/icon.svg",
