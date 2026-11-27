@@ -426,18 +426,12 @@ function renderSettlement(t){
  const rows=result.balances.map(x=>'<div class="settlement-balance"><span>'+esc(x.name)+'</span><b class="'+(x.amount>=0?"positive":"negative")+'">'+(x.amount>0?"+":"")+money(x.amount)+'</b></div>').join("");
  const transfers=result.transfers.map(x=>'<div class="settlement-transfer"><b>'+esc(x.from)+'</b><span>→</span><b>'+esc(x.to)+'</b><strong>'+money(x.amount)+'</strong></div>').join("")||'<p class="muted">현재 정산할 금액이 없습니다.</p>';
  const section=document.createElement("section");section.className="surface settlement-panel";section.innerHTML='<div class="section-title"><div><h3>여행 정산</h3><p class="muted">결제자와 분담 방식에 따라 최소 송금 횟수로 정산합니다.</p></div><button class="button outline small" id="editTravelers">여행자 설정</button></div><div class="settlement-grid"><div><h4>개인별 정산 결과</h4>'+rows+'</div><div><h4>송금 안내</h4>'+transfers+'</div></div><p class="muted settlement-foot">균등 분담은 원 단위로 나누며 나머지는 여행자 목록 앞 순서부터 1원씩 배분합니다. 결제자 부담 지출은 개인 부담으로 계산합니다.</p>';
- $("#panel-budget").append(section);$("#editTravelers").onclick=()=>openModal('<p class="eyebrow">TRAVEL GROUP</p><h2>여행자 이름 설정</h2><form id="travelerNamesForm"><label class="field">이름을 쉼표로 구분해 입력하세요<textarea name="names" rows="3" placeholder="예: 민수, 지영">'+esc(names.join(", "))+'</textarea></label><p class="muted">여행 인원 수와 이름 수를 일치시키는 것을 권장합니다.</p><div class="modal-actions"><button type="button" class="button outline" id="cancelTravelerNames">취소</button><button class="button primary">저장</button></div></form>');
- $("#cancelTravelerNames").onclick=closeModal;$("#travelerNamesForm").onsubmit=async e=>{e.preventDefault();const value=new FormData(e.currentTarget).get("names");t.travelerNames=String(value).split(",").map(x=>x.trim()).filter(Boolean);closeModal();await persistTrip(t,{quiet:true});renderBudget(t)};
-}
-function renderSettlement(t){
- const inferred=[...new Set(tripExpenses(t).map(x=>x.paidBy).filter(Boolean))],names=Array.isArray(t.travelerNames)&&t.travelerNames.length?t.travelerNames.slice():inferred.slice();
- while(names.length<Math.max(1,Number(t.travelers)||1))names.push("여행자 "+(names.length+1));
- const result=window.WaypointPlanning.calculateSettlement(tripExpenses(t),names);
- const rows=result.balances.map(x=>'<div class="settlement-balance"><span>'+esc(x.name)+'</span><b class="'+(x.amount>=0?"positive":"negative")+'">'+(x.amount>0?"+":"")+money(x.amount)+'</b></div>').join("");
- const transfers=result.transfers.map(x=>'<div class="settlement-transfer"><b>'+esc(x.from)+'</b><span>→</span><b>'+esc(x.to)+'</b><strong>'+money(x.amount)+'</strong></div>').join("")||'<p class="muted">현재 정산할 금액이 없습니다.</p>';
- const section=document.createElement("section");section.className="surface settlement-panel";section.innerHTML='<div class="section-title"><div><h3>여행 정산</h3><p class="muted">결제자와 분담 방식에 따라 최소 송금 횟수로 정산합니다.</p></div><button class="button outline small" id="editTravelers">여행자 설정</button></div><div class="settlement-grid"><div><h4>개인별 정산 결과</h4>'+rows+'</div><div><h4>송금 안내</h4>'+transfers+'</div></div><p class="muted settlement-foot">균등 분담은 원 단위로 나누며 나머지는 여행자 목록 앞 순서부터 1원씩 배분합니다. 결제자 부담 지출은 개인 부담으로 계산합니다.</p>';
- $("#panel-budget").append(section);$("#editTravelers").onclick=()=>openModal('<p class="eyebrow">TRAVEL GROUP</p><h2>여행자 이름 설정</h2><form id="travelerNamesForm"><label class="field">이름을 쉼표로 구분해 입력하세요<textarea name="names" rows="3">'+esc(names.join(", "))+'</textarea></label><p class="muted">여행 인원 수와 이름 수를 일치시키는 것을 권장합니다.</p><div class="modal-actions"><button type="button" class="button outline" id="cancelTravelerNames">취소</button><button class="button primary">저장</button></div></form>');
- $("#cancelTravelerNames").onclick=closeModal;$("#travelerNamesForm").onsubmit=async e=>{e.preventDefault();const value=new FormData(e.currentTarget).get("names");t.travelerNames=String(value).split(",").map(x=>x.trim()).filter(Boolean);closeModal();await persistTrip(t,{quiet:true});renderBudget(t)};
+ $("#panel-budget").append(section);
+ $("#editTravelers").onclick=()=>{
+  openModal('<p class="eyebrow">TRAVEL GROUP</p><h2>여행자 이름 설정</h2><form id="travelerNamesForm"><label class="field">이름을 쉼표로 구분해 입력하세요<textarea name="names" rows="3" placeholder="예: 민수, 지영">'+esc(names.join(", "))+'</textarea></label><p class="muted">여행 인원 수와 이름 수를 일치시키는 것을 권장합니다.</p><div class="modal-actions"><button type="button" class="button outline" id="cancelTravelerNames">취소</button><button class="button primary">저장</button></div></form>');
+  $("#cancelTravelerNames").onclick=closeModal;
+  $("#travelerNamesForm").onsubmit=async e=>{e.preventDefault();const value=new FormData(e.currentTarget).get("names");t.travelerNames=String(value).split(",").map(x=>x.trim()).filter(Boolean);closeModal();await persistTrip(t,{quiet:true});renderBudget(t)};
+ };
 }
 function renderBudget(t){
  const expenses=tripExpenses(t),sum=totalExpenses(t),remaining=Math.max(0,(Number(t.targetBudget)||0)-sum);
