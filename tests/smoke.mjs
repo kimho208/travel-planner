@@ -182,6 +182,8 @@ try{
  const hotelIn=await ai.locator("#wp-hotel-form input[name=checkInDate]").inputValue();
  if(hotelOut<=hotelIn){const d=new Date(hotelIn+"T00:00:00");d.setDate(d.getDate()+1);await ai.locator("#wp-hotel-form input[name=checkOutDate]").fill(d.toISOString().slice(0,10));}
  await ai.locator("#wp-hotel-form").locator("button[type=submit]").click();
+ await ai.waitForTimeout(800);
+ console.log("HOTEL SEARCH DIAGNOSTICS",JSON.stringify({actions,status:await ai.locator("#wp-search-status").innerText(),results:await ai.locator("#wp-search-results").innerText(),checkIn:await ai.locator("#wp-hotel-form input[name=checkInDate]").inputValue(),checkOut:await ai.locator("#wp-hotel-form input[name=checkOutDate]").inputValue()}));
  await ai.locator(".wp-result-card").filter({hasText:"WAYPOINT Test Hotel"}).waitFor();
  assert.ok(actions.includes("hotel-search"),"Hotel search should call the supplier API");
  await ai.locator("#addReservation").click();
