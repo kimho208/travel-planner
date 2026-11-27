@@ -241,14 +241,13 @@ function renderPlan(t){
 }
 function stopCard(s,i){return `<article class="stop-card" draggable="true" data-stop-id="${esc(s.id)}" id="stop-${esc(s.id)}"><div class="stop-index">${String(i+1).padStart(2,"0")}</div><div class="stop-main"><span class="stop-time">${esc(s.time||"시간 미정")} ${s.endTime?"— "+esc(s.endTime):""} ${s.durationMinutes?"· "+s.durationMinutes+"분":""}</span><h4>${esc(s.name)}</h4><p>${esc(s.address||s.area||s.reason||"장소 정보를 확인해 주세요.")}</p>${s.note?'<p>메모 · '+esc(s.note)+'</p>':""}${s.verified?'<p class="verified-note">✓ 실제 장소 확인됨</p>':""}</div><div class="stop-actions"><button class="tiny-btn" data-stop-up="${esc(s.id)}" aria-label="위로 이동">↑</button><button class="tiny-btn" data-stop-down="${esc(s.id)}" aria-label="아래로 이동">↓</button><button class="tiny-btn" data-stop-move="${esc(s.id)}">날짜 이동</button><button class="tiny-btn" data-stop-edit="${esc(s.id)}">편집</button><button class="tiny-btn" data-stop-remove="${esc(s.id)}">삭제</button></div></article>`}
 function renderMap(t,d){
- if(!window.L)return;const el=$("#tripMap");if(!el)return;
- if(state.map){state.map.remove();state.map=null}
- const points=dayStops(d).filter(s=>s.location?.latitude&&s.location?.longitude);
- const center=points.length?[points[0].location.latitude,points[0].location.longitude]:[35.68,139.76];
+ if(!window.L)return;const el=$("#tripMap");if(!el)return;if(state.map){state.map.remove();state.map=null}
+ const points=dayStops(d).filter(s=>s.location&&Number.isFinite(Number(s.location.latitude))&&Number.isFinite(Number(s.location.longitude)));
+ const center=points.length?[Number(points[0].location.latitude),Number(points[0].location.longitude)]:[35.68,139.76];
  state.map=L.map(el,{scrollWheelZoom:false}).setView(center,points.length?12:4);
  L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",{maxZoom:19,attribution:"© OpenStreetMap"}).addTo(state.map);
- state.markers=[];points.forEach((s,i)=>{const marker=L.marker([s.location.latitude,s.location.longitude]).addTo(state.map).bindPopup("<b>"+esc(s.name)+"</b><br>"+esc(s.time||""));state.markers.push(marker)});
- if(points.length>1){const bounds=L.latLngBounds(points.map(s=>[s.location.latitude,s.location.longitude]));state.map.fitBounds(bounds.pad(.18))}
+ state.markers=[];points.forEach(s=>{const marker=L.marker([Number(s.location.latitude),Number(s.location.longitude)]).addTo(state.map).bindPopup("<b>"+esc(s.name)+"</b><br>"+esc(s.time||""));marker.on("click",()=>{const card=document.getElementById("stop-"+s.id);if(card){$$(".stop-card").forEach(x=>x.classList.remove("map-selected"));card.classList.add("map-selected");card.scrollIntoView({behavior:"smooth",block:"center"})}});state.markers.push({id:s.id,marker})});
+ if(points.length>1)state.map.fitBounds(L.latLngBounds(points.map(s=>[Number(s.location.latitude),Number(s.location.longitude)])).pad(.18));
  setTimeout(()=>state.map?.invalidateSize(),120);
 }
 function moveStopBy(t,dayIndex,id,delta){
@@ -293,17 +292,23 @@ function printTripPlan(t){
 function decodePolyline(encoded){
  let index=0,lat=0,lng=0,coords=[];while(index<encoded.length){let b,shift=0,result=0;do{b=encoded.charCodeAt(index++)-63;result|=(b&0x1f)<<shift;shift+=5}while(b>=0x20);const dlat=result&1?~(result>>1):(result>>1);lat+=dlat;shift=0;result=0;do{b=encoded.charCodeAt(index++)-63;result|=(b&0x1f)<<shift;shift+=5}while(b>=0x20);const dlng=result&1?~(result>>1):(result>>1);lng+=dlng;coords.push([lat/1e5,lng/1e5])}return coords;
 }
+async function getPublicDrivingRoute(a,b){
+ const x=a.location,y=b.location,url="https://router.project-osrm.org/route/v1/driving/"+Number(x.longitude)+","+Number(x.latitude)+";"+Number(y.longitude)+","+Number(y.latitude)+"?overview=full&geometries=polyline&steps=false";
+ const response=await fetch(url,{signal:AbortSignal.timeout(15000)});if(!response.ok)throw new Error("공개 자동차 경로 서버에 연결할 수 없습니다.");
+ const data=await response.json(),route=data.routes?.[0];if(!route)throw new Error("자동차 경로를 찾지 못했습니다.");
+ return {duration:String(route.duration)+"s",distanceMeters:route.distance,encodedPolyline:route.geometry,provider:"OSRM"};
+}
 async function calculateDayRoute(t,d){
  const stops=dayStops(d).filter(s=>s.location?.latitude&&s.location?.longitude);
  if(stops.length<2){toast("실제 위치가 확인된 장소가 두 곳 이상 필요합니다.");return}
  const mode=$("#routeMode").value;$("#routeSummary").textContent="실제 이동 경로를 계산하고 있습니다…";$("#calcRoute").disabled=true;
  try{
- const legs=[];for(let i=0;i<stops.length-1;i++){const r=await callAssistant("route",{origin:{name:stops[i].name,address:stops[i].address,location:stops[i].location},destination:{name:stops[i+1].name,address:stops[i+1].address,location:stops[i+1].location},travelMode:mode},25000);legs.push(r)}
+ const legs=[];for(let i=0;i<stops.length-1;i++){let r;try{r=await callAssistant("route",{origin:{name:stops[i].name,address:stops[i].address,location:stops[i].location},destination:{name:stops[i+1].name,address:stops[i+1].address,location:stops[i+1].location},travelMode:mode},25000)}catch(error){if(mode!=="DRIVE")throw error;r=await getPublicDrivingRoute(stops[i],stops[i+1])}legs.push(r)}
  const lines=legs.map(x=>x.encodedPolyline?decodePolyline(x.encodedPolyline):[]);
  state.routeLayers.forEach(x=>x.remove());state.routeLayers=[];
  lines.filter(x=>x.length).forEach(coords=>{const line=L.polyline(coords,{color:"#1b795c",weight:5,opacity:.8}).addTo(state.map);state.routeLayers.push(line)});
  const totalMeters=legs.reduce((a,x)=>a+(Number(x.distanceMeters)||0),0);const totalSecs=legs.reduce((a,x)=>a+(parseInt(x.duration)||0),0);
- $("#routeSummary").textContent="총 "+(totalMeters/1000).toFixed(1)+" km · 약 "+Math.round(totalSecs/60)+"분 · "+(mode==="WALK"?"도보":mode==="DRIVE"?"자동차":"대중교통")+" 기준";
+ $("#routeSummary").textContent="총 "+(totalMeters/1000).toFixed(1)+" km · 약 "+Math.round(totalSecs/60)+"분 · "+(mode==="WALK"?"도보":mode==="DRIVE"?"자동차":"대중교통")+" 기준"+(legs.some(x=>x.provider==="OSRM")?" · 일부 구간 OSRM 공개 API":"");
  $("#routeLegs").innerHTML=legs.map((x,i)=>`<div class="expense-item"><div><b>${esc(stops[i].name)} → ${esc(stops[i+1].name)}</b><small>${(Number(x.distanceMeters)/1000).toFixed(1)} km</small></div><strong>${Math.round(parseInt(x.duration)/60)}분</strong></div>`).join("");
  }catch(err){$("#routeSummary").textContent=err.message;toast("경로 계산 실패: "+err.message)}
  finally{$("#calcRoute").disabled=false}
