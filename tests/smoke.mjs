@@ -78,8 +78,10 @@ try{
  await offline.locator('input[name="destination"]').fill("로컬 저장 테스트");
  await offline.locator("#submitCreate").click();
  await offline.locator("#view-trip.active").waitFor({timeout:10000});
- await offline.locator(".stop-card").first().waitFor({timeout:5000});
- assert.equal(await offline.locator(".stop-card").count(),3,"Offline trip creation should build a daily starter template");
+ await offline.locator("#panel-plan.active").waitFor({timeout:5000});
+ const offlineTemplate=await offline.evaluate(()=>({cards:document.querySelectorAll("#panel-plan .stop-card").length,activeTab:document.querySelector(".trip-tab.active")?.dataset.tab,trip:JSON.parse(localStorage.getItem("waypoint-v2-cache")||"{}").trips?.[0]?.itinerary?.[0]}));
+ console.log("OFFLINE TEMPLATE DIAGNOSTICS",JSON.stringify(offlineTemplate));
+ assert.equal(offlineTemplate.cards,3,"Offline trip creation should build a daily starter template");
  await offline.waitForFunction(()=>JSON.parse(localStorage.getItem("waypoint-v2-cache")||"null")?.trips?.some(t=>t.destination==="로컬 저장 테스트"),null,{timeout:5000});
  const savedCache=await offline.evaluate(()=>JSON.parse(localStorage.getItem("waypoint-v2-cache")));
  assert.equal(savedCache.schemaVersion,3,"Local cache must be stored with a schema version");
