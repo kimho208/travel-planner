@@ -108,10 +108,18 @@ export interface Trip {
   createdAt?: string;
 }
 
-export interface LocalCacheV2 {
-  schemaVersion: 2;
+export interface LocalCacheV3 {
+  schemaVersion: 3;
   trips: Trip[];
   activeId: string | null;
   saved: Place[];
   updatedAt: string;
+}
+/** Legacy cache shape accepted by the in-place migration. */
+export interface LocalCacheV2 {
+  schemaVersion?: 2;
+  trips: Trip[];
+  activeId: string | null;
+  saved: Place[];
+  updatedAt?: string;
 }
