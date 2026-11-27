@@ -395,7 +395,7 @@ function renderReservations(t){
  $("#panel-reservations").innerHTML=`<div class="section-title"><div><span class="eyebrow">BOOKING DETAILS</span><h2>예약 정보</h2></div><button class="button primary" id="addReservation">＋ 예약 추가</button></div><div class="notice">예약은 출발·도착·체크인 시간 순으로 정렬합니다. 시간은 현재 기기의 시간대로 표시되며, 항공편 실시간 운항 상태 조회는 별도 항공 데이터 제공업체 연동이 필요합니다.</div><div class="reservation-grid">${items.map(reservationCard).join("")||'<div class="empty-small">등록된 예약이 없습니다. 항공권이나 숙소 정보를 추가해 보세요.</div>'}</div><div class="surface" style="margin-top:16px"><h3>예약 확인서에서 정보 가져오기</h3><p class="muted">PDF, JPG, PNG 파일을 선택하면 항공편·숙소 정보를 추출해 입력 양식에 채웁니다.</p><input id="reservationFile" type="file" accept=".pdf,image/png,image/jpeg,image/webp"><div id="extractStatus" class="muted"></div></div><div id="reservationAttachments" class="surface" style="margin-top:16px"></div>`;
  renderReservationAttachments(t);
  window.WaypointBookingSearch?.mount(t,{request:callAssistant,persist:persistTrip,refresh:()=>renderReservations(t)});
- $("#addReservation").onclick=()=>reservationModal(t);
+ const addReservationButton=$("#addReservation");addReservationButton.onclick=null;addReservationButton.addEventListener("click",event=>{event.preventDefault();reservationModal(t)});
  $("#reservationFile").onchange=e=>extractReservation(e.target.files?.[0],t);
  $$("[data-res-edit]").forEach(b=>b.onclick=()=>reservationModal(t,b.dataset.resEdit));
  $$("[data-res-delete]").forEach(b=>b.onclick=()=>deleteReservation(t,b.dataset.resDelete));

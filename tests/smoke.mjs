@@ -187,7 +187,9 @@ try{
  await ai.locator(".wp-result-card").filter({hasText:"WAYPOINT Test Hotel"}).waitFor();
  assert.ok(actions.includes("hotel-search"),"Hotel search should call the supplier API");
  await ai.locator("#addReservation").click();
- await ai.locator('input[name="title"]').fill("인천-간사이 왕복");
+ console.log("RESERVATION MODAL DIAGNOSTICS",JSON.stringify({modal:await ai.locator("#modalContent").innerText(),open:await ai.locator("#modalBackdrop").getAttribute("class"),errors:aiErrors}));
+ await ai.locator("#reservationForm").waitFor({timeout:5000});
+ await ai.locator('#reservationForm input[name="title"]').fill("인천-간사이 왕복");
  await ai.locator("#reservationForm button.button.primary").click();
  await ai.locator(".reservation-card").filter({hasText:"인천-간사이 왕복"}).waitFor();
  assert.equal(aiErrors.length,0,"Authenticated trip workspace should not throw browser errors: "+aiErrors.join("; "));
