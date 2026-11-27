@@ -273,14 +273,14 @@ function renderMap(t,d){
 function moveStopBy(t,dayIndex,id,delta){
  const list=dayStops(tripDays(t)[dayIndex]),index=list.findIndex(x=>x.id===id),next=index+delta;
  if(index<0||next<0||next>=list.length)return;
- state.routeUndo={tripId:t.id,dayIndex,items:JSON.parse(JSON.stringify(list))};
+ state.routeUndo={tripId:t.id,itinerary:JSON.parse(JSON.stringify(tripDays(t)))};
  const [item]=list.splice(index,1);list.splice(next,0,item);persistTrip(t,{quiet:true});renderPlan(t);
 }
 function moveStopToDay(t,id,targetDay){
  const sourceIndex=tripDays(t).findIndex(d=>dayStops(d).some(x=>x.id===id));
  if(sourceIndex<0||targetDay<0||targetDay>=tripDays(t).length||sourceIndex===targetDay)return;
  const source=dayStops(tripDays(t)[sourceIndex]),index=source.findIndex(x=>x.id===id),[item]=source.splice(index,1);
- dayStops(tripDays(t)[targetDay]).push(item);state.day=targetDay;state.routeUndo={tripId:t.id,dayIndex:targetDay,items:null};
+ dayStops(tripDays(t)[targetDay]).push(item);state.day=targetDay;state.routeUndo={tripId:t.id,itinerary:JSON.parse(JSON.stringify(tripDays(t)))};
  persistTrip(t,{quiet:true});renderPlan(t);toast("다른 날짜로 일정을 이동했습니다.");
 }
 function moveStopModal(t,id){
@@ -291,14 +291,14 @@ function moveStopModal(t,id){
 function optimizeDayRoute(t,dayIndex){
  const items=dayStops(tripDays(t)[dayIndex]),located=items.filter(x=>x.location&&Number.isFinite(Number(x.location.latitude))&&Number.isFinite(Number(x.location.longitude)));
  if(located.length<2){toast("실제 좌표가 확인된 장소가 두 곳 이상 있어야 동선을 최적화할 수 있습니다.");return}
- state.routeUndo={tripId:t.id,dayIndex,items:JSON.parse(JSON.stringify(items))};
+ state.routeUndo={tripId:t.id,itinerary:JSON.parse(JSON.stringify(tripDays(t)))};
  const optimized=window.WaypointPlanning.optimizeByNearestNeighbor(items);
  tripDays(t)[dayIndex].items=optimized;persistTrip(t,{quiet:true});renderPlan(t);
  toast("첫 장소를 출발점으로 두고 가까운 장소 순서로 정렬했습니다. 최단 경로 보장은 아니며, 이동 경로를 다시 계산해 주세요.");
 }
 function undoRouteChange(t){
- const undo=state.routeUndo;if(!undo||undo.tripId!==t.id||undo.dayIndex!==state.day||!undo.items){toast("되돌릴 수 있는 변경 내역이 없습니다.");return}
- tripDays(t)[undo.dayIndex].items=undo.items;state.routeUndo=null;persistTrip(t,{quiet:true});renderPlan(t);toast("일정 순서를 되돌렸습니다.");
+ const undo=state.routeUndo;if(!undo||undo.tripId!==t.id||!Array.isArray(undo.itinerary)){toast("되돌릴 수 있는 변경 내역이 없습니다.");return}
+ t.itinerary=undo.itinerary;state.day=Math.min(state.day,tripDays(t).length-1);state.routeUndo=null;persistTrip(t,{quiet:true});renderPlan(t);toast("일정 변경을 되돌렸습니다.");
 }
 function exportTripCalendar(t){
  const blob=new Blob([window.WaypointPlanning.makeICS(t)],{type:"text/calendar;charset=utf-8"}),url=URL.createObjectURL(blob),a=document.createElement("a");
@@ -334,7 +334,7 @@ async function calculateDayRoute(t,d){
  finally{$("#calcRoute").disabled=false}
 }
 function reorderStops(t,dayIndex,from,to){
- const a=dayStops(tripDays(t)[dayIndex]);const i=a.findIndex(x=>x.id===from),j=a.findIndex(x=>x.id===to);if(i<0||j<0||i===j)return;const [x]=a.splice(i,1);a.splice(j,0,x);persistTrip(t,{quiet:true});renderPlan(t);toast("일정 순서를 변경했습니다. 이동 경로를 다시 계산해 주세요.");
+ const a=dayStops(tripDays(t)[dayIndex]);const i=a.findIndex(x=>x.id===from),j=a.findIndex(x=>x.id===to);if(i<0||j<0||i===j)return;state.routeUndo={tripId:t.id,itinerary:JSON.parse(JSON.stringify(tripDays(t)))};const [x]=a.splice(i,1);a.splice(j,0,x);persistTrip(t,{quiet:true});renderPlan(t);toast("일정 순서를 변경했습니다. 이동 경로를 다시 계산해 주세요.");
 }
 function addStopModal(t,dayIndex){
  openModal(`<p class="eyebrow">ADD TO ITINERARY</p><h2>일정에 장소 추가</h2><form id="stopForm"><div class="modal-grid"><label class="field">장소 이름<input name="name" required placeholder="예: 오사카성"></label><label class="field">방문 시간<input name="time" type="time" value="10:00"></label><label class="field">주소<input name="address" placeholder="주소 또는 지역"></label><label class="field">예상 비용<input name="cost" type="number" min="0" placeholder="0"></label><label class="field">분류<select name="category"><option>명소</option><option>식당</option><option>카페</option><option>쇼핑</option><option>숙소</option><option>기타</option></select></label><label class="field">메모<input name="note" placeholder="예약 여부, 방문 팁 등"></label></div><div class="modal-actions"><button type="button" class="button outline" id="cancelStop">취소</button><button class="button primary">일정에 추가</button></div></form>`);
