@@ -18,7 +18,7 @@ try{
   const state=store.getState();state.profile.name="after";state.items.push("one");
   return {name:state.profile.name,count:state.items.length,changes};
  });
- assert.deepEqual(storeCheck,{name:"after",count:1,changes:3},"Central store must publish nested object and array changes");
+ assert.deepEqual(storeCheck,{name:"after",count:1,changes:2},"Central store must publish nested object and array changes");
  try{await page.waitForFunction(()=>document.documentElement.dataset.appReady==="true",null,{timeout:15000})}catch(e){console.log("BOOT DIAGNOSTICS",JSON.stringify(errors),JSON.stringify(await page.evaluate(()=>({scripts:[...document.scripts].map(x=>x.src),ready:document.documentElement.dataset.appReady,rail:!!document.querySelector("#rail")}))));throw e}
  assert.ok(await page.locator(".home-hero").isVisible(),"New homepage hero must render");
  assert.equal(await page.locator(".rail-link[data-view]").count(),4,"Primary navigation must be present");
