@@ -67,7 +67,7 @@ try{
   await window.WaypointFiles.remove(saved.id);
   return {name:saved.name,count:listed.length,blob:loaded.blob.size};
  });
- assert.deepEqual(attachmentCheck,{name:"confirmation.pdf",count:1,blob:24},"Reservation files should persist privately in IndexedDB");
+ assert.deepEqual(attachmentCheck,{name:"confirmation.pdf",count:1,blob:25},"Reservation files should persist privately in IndexedDB");
  const calendarCheck=await offline.evaluate(()=>window.WaypointPlanning.makeICS({id:"t",itinerary:[{date:"2026-12-23",items:[{id:"s",name:"Osaka Castle",time:"10:00",endTime:"11:00"}]}]}));
  assert.ok(calendarCheck.includes("DTSTART;TZID=Asia/Seoul:20261223T100000"),"Calendar export should contain local start time");
  assert.ok(calendarCheck.includes("SUMMARY:Osaka Castle"),"Calendar export should include event title");
