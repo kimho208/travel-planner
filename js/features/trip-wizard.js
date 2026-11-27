@@ -9,9 +9,9 @@
     <section data-wstep="0">
      <h3>어디로, 언제 떠나시나요?</h3><div class="modal-grid">
       <label class="field">여행 국가·도시<input name="destination" placeholder="예: 일본 오사카, 프랑스 파리" required></label>
-      <label class="field">여행 인원<select id="wp-total-travelers" name="travelers"><option>1</option><option selected>2</option><option>3</option><option>4</option><option>5</option><option>6</option><option>7</option><option>8</option></select></label>
+      <input type="hidden" name="travelers" value="2"><label class="field">성인<select name="adults"><option>1</option><option selected>2</option><option>3</option><option>4</option><option>5</option><option>6</option><option>7</option><option>8</option><option>9</option></select></label><label class="field">어린이<select name="children"><option selected>0</option><option>1</option><option>2</option><option>3</option><option>4</option><option>5</option><option>6</option><option>7</option><option>8</option></select></label><label class="field">유아<select name="infants"><option selected>0</option><option>1</option><option>2</option><option>3</option><option>4</option></select></label>
       <label class="field">출발일<input name="startDate" type="date" value="${start}" required></label><label class="field">귀국·여행 종료일<input name="endDate" type="date" value="${end}" required></label>
-      <label class="field">출발 공항 (선택)<input name="departureAirport" maxlength="3" value="ICN" placeholder="ICN"></label><label class="field">도착 공항 (선택)<input name="arrivalAirport" maxlength="3" placeholder="KIX"></label>
+      <label class="field">출발 공항 (IATA 코드)<input name="departureAirport" list="wp-airport-options" value="ICN" placeholder="공항명 또는 ICN"></label><label class="field">도착 공항 (IATA 코드)<input name="arrivalAirport" list="wp-airport-options" placeholder="공항명 또는 KIX"></label><datalist id="wp-airport-options"></datalist>
      </div><p class="notice">공항 코드는 국제 항공권 검색에 사용하는 3자리 IATA 코드입니다. 예: 인천 ICN, 간사이 KIX, 나리타 NRT. 목적지 공항을 모르면 비워두고 나중에 항공 검색에서 입력할 수 있습니다.</p>
     </section>
     <section data-wstep="1" hidden>
@@ -45,11 +45,13 @@
    </form>`;
   back.classList.add("open");
   const form=$("#createTripForm"),steps=[...form.querySelectorAll("[data-wstep]")],labels=[...content.querySelectorAll("[data-wstep-label]")],progress=$("#wp-wizard-progress");
+  const syncPax=()=>{const adults=Number(form.elements.adults.value)||1,children=Number(form.elements.children.value)||0,infants=Number(form.elements.infants.value)||0;if(infants>adults)form.elements.infants.value=String(adults);form.elements.travelers.value=String(adults+children+Number(form.elements.infants.value||0))};["adults","children","infants"].forEach(n=>form.elements[n].addEventListener("change",syncPax));syncPax();
+  const airportList=$("#wp-airport-options");let airportTimer=null;["departureAirport","arrivalAirport"].forEach(name=>{const input=form.elements[name];input.addEventListener("input",()=>{clearTimeout(airportTimer);const keyword=input.value.trim();if(keyword.length<2||!window.WaypointAPI?.request)return;airportTimer=setTimeout(async()=>{try{const result=await window.WaypointAPI.request("airport-search",{keyword});airportList.innerHTML=(result.airports||[]).map(a=>`<option value="${a.iataCode}" label="${a.name} · ${a.cityName||""}"></option>`).join("")}catch(_){/* Suggestions require a configured Amadeus connection. */}},350)})});
   function show(n){step=n;steps.forEach((x,i)=>x.hidden=i!==n);labels.forEach((x,i)=>x.classList.toggle("active",i===n));progress.style.width=((n+1)/3*100)+"%";$("#wp-wizard-back").hidden=n===0;$("#wp-wizard-next").hidden=n===2;$("#submitCreate").hidden=n!==2;$("#wp-wizard-hint").textContent=(n+1)+" / 3 단계";const first=steps[n].querySelector("input:not([type=checkbox]),select,textarea");first?.focus()}
   $("#wp-wizard-back").onclick=()=>show(Math.max(0,step-1));
   $("#wp-wizard-next").onclick=()=>{const required=[...steps[step].querySelectorAll("[required]")];for(const el of required)if(!el.reportValidity())return;if(step===0&&form.elements.endDate.value<form.elements.startDate.value){alert("여행 종료일은 출발일 이후여야 합니다.");return}show(Math.min(2,step+1))};
   form.elements.budget.addEventListener("input",e=>{const n=e.target.value.replace(/[^0-9]/g,"");e.target.value=n?Number(n).toLocaleString("ko-KR"):""});
-  form.onsubmit=e=>{if(form.elements.endDate.value<form.elements.startDate.value){e.preventDefault();show(0);alert("여행 종료일은 출발일 이후여야 합니다.");return}const total=Number(form.elements.travelers.value)||1;form.dataset.extra=JSON.stringify({});if(typeof window.createTrip==="function")window.createTrip(e);else{e.preventDefault();alert("여행 생성 모듈을 불러오지 못했습니다. 새로고침해 주세요.")}};
+  form.onsubmit=e=>{if(form.elements.endDate.value<form.elements.startDate.value){e.preventDefault();show(0);alert("여행 종료일은 출발일 이후여야 합니다.");return}for(const name of ["departureAirport","arrivalAirport"]){const code=form.elements[name].value.trim();if(code&&!/^[A-Z]{3}$/.test(code)){e.preventDefault();show(0);alert("공항은 자동완성 목록에서 선택하거나 3자리 IATA 코드로 입력해 주세요.");return}}if(typeof window.createTrip==="function")window.createTrip(e);else{e.preventDefault();alert("여행 생성 모듈을 불러오지 못했습니다. 새로고침해 주세요.")}};
   show(0);
  }
  function init(){["#createHero","#heroCreate","#emptyCreate","#newTripTop","#createTrips"].forEach(sel=>{const el=$(sel);if(el)el.onclick=open})}

@@ -91,7 +91,7 @@ Deno.serve(async (req: Request) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: cors });
   const origin = req.headers.get("origin") || "";
   if (origin && origin !== "https://kimho208.github.io" && !origin.startsWith("http://localhost")) return reply({ error: "허용되지 않은 요청 주소입니다." }, 403);
-  if (req.method === "GET") return reply({ ok: true, geminiConfigured: !!Deno.env.get("GEMINI_API_KEY"), mapsConfigured: !!Deno.env.get("GOOGLE_MAPS_API_KEY") });
+  if (req.method === "GET") return reply({ ok: true, geminiConfigured: !!Deno.env.get("GEMINI_API_KEY"), mapsConfigured: !!Deno.env.get("GOOGLE_MAPS_API_KEY"), amadeusConfigured: !!Deno.env.get("AMADEUS_CLIENT_ID") && !!Deno.env.get("AMADEUS_CLIENT_SECRET") });
   if (req.method !== "POST") return reply({ error: "POST 요청만 지원합니다." }, 405);
   let body: Record<string, unknown>;
   try { body = await req.json(); } catch { return reply({ error: "요청 형식이 올바르지 않습니다." }, 400); }
@@ -109,6 +109,16 @@ Deno.serve(async (req: Request) => {
   if (!userCheck.ok) return reply({ error: "로그인 세션이 만료되었습니다. 다시 로그인해 주세요." }, 401);
 
 
+  if (action === "airport-search") {
+    if (!Deno.env.get("AMADEUS_CLIENT_ID") || !Deno.env.get("AMADEUS_CLIENT_SECRET")) return reply({ error: "공항 자동완성에는 Amadeus API 키가 필요합니다." }, 424);
+    const keyword = String(body.keyword || "").trim();
+    if (keyword.length < 2 || keyword.length > 80) return reply({ error: "공항 검색어는 2~80자로 입력해 주세요." }, 400);
+    try {
+      const data = await amadeusGet("/v1/reference-data/locations", { subType: "AIRPORT,CITY", keyword, "page[limit]": "10", view: "LIGHT" });
+      const airports = (data.data || []).map((x: Record<string, any>) => ({ iataCode: x.iataCode || "", name: x.name || "", cityName: x.address?.cityName || x.name || "", countryName: x.address?.countryName || "", subType: x.subType || "" })).filter((x: Record<string, any>) => /^[A-Z]{3}$/.test(x.iataCode));
+      return reply({ ok: true, airports });
+    } catch (error) { return reply({ error: error instanceof Error ? error.message : "공항 검색에 실패했습니다." }, 502); }
+  }
   if (action === "flight-search") {
     if (!Deno.env.get("AMADEUS_CLIENT_ID") || !Deno.env.get("AMADEUS_CLIENT_SECRET")) return reply({ error: "항공편 실시간 검색을 사용하려면 Supabase Secrets에 AMADEUS_CLIENT_ID와 AMADEUS_CLIENT_SECRET을 등록해야 합니다.", setupRequired: ["AMADEUS_CLIENT_ID", "AMADEUS_CLIENT_SECRET"] }, 424);
     const origin = String(body.origin || "").trim().toUpperCase(), destination = String(body.destination || "").trim().toUpperCase();
@@ -140,9 +150,11 @@ Deno.serve(async (req: Request) => {
     const adults = Math.max(1, Math.min(9, Number(body.adults) || 1)), rooms = Math.max(1, Math.min(8, Number(body.rooms) || 1));
     if (!cityInput || cityInput.length > 100 || !validDate(checkInDate) || !validDate(checkOutDate) || checkOutDate <= checkInDate) return reply({ error: "도시와 체크인·체크아웃 날짜를 올바르게 입력해 주세요." }, 400);
     try {
-      let cityCode = cityInput.toUpperCase(), cityName = cityInput;
+      const cityAliases: Record<string,string> = { "오사카":"OSA", "도쿄":"TYO", "도쿄도":"TYO", "후쿠오카":"FUK", "삿포로":"SPK", "나고야":"NGO", "서울":"SEL", "부산":"PUS", "파리":"PAR", "런던":"LON", "뉴욕":"NYC", "로마":"ROM", "싱가포르":"SIN", "타이베이":"TPE", "방콕":"BKK" };
+      const lastWord = cityInput.split(/[\s,]+/).filter(Boolean).at(-1) || cityInput;
+      let cityCode = cityAliases[cityInput] || cityAliases[lastWord] || cityInput.toUpperCase(), cityName = cityInput;
       if (!/^[A-Z]{3}$/.test(cityCode)) {
-        const found = await amadeusGet("/v1/reference-data/locations", { subType: "CITY", keyword: cityInput, "page[limit]": "5", view: "LIGHT" });
+        const found = await amadeusGet("/v1/reference-data/locations", { subType: "CITY", keyword: lastWord, "page[limit]": "5", view: "LIGHT" });
         const match = (found.data || []).find((x: Record<string, any>) => x.iataCode);
         if (!match) return reply({ error: "도시 코드를 찾지 못했습니다. 영문 도시명 또는 3자리 IATA 도시 코드를 입력해 주세요." }, 404);
         cityCode = match.iataCode; cityName = match.name || cityInput;
@@ -174,6 +186,8 @@ Deno.serve(async (req: Request) => {
     const prompt = `당신은 실제 여행 데이터를 엄격히 다루는 전문 여행 설계 엔진입니다. 반드시 JSON 객체 하나만 반환합니다.
 여행 조건: ${JSON.stringify(trip)}
 목적지가 비어 있으면 기간, 예산, 출발지(제공된 경우), 선호 스타일을 바탕으로 현실적인 여행지 한 곳을 선택하고 suggestedDestination에 국가와 도시를 명시하세요.
+여행자 수, 출발·도착 공항, 좌석 등급, 항공편 선호, 숙소 유형·등급·지역·객실 수, 여행 속도, 식사 예산, 도착 시간대는 반드시 일정 설계 판단에 반영하세요.
+항공편 번호, 실시간 항공권 가격, 호텔 객실 요금, 예약 가능 여부를 추측하거나 만들어내지 마세요. 이 정보는 별도의 실제 공급자 검색 API에서만 가져옵니다.
 일정 규칙:
 - startDate와 endDate를 모두 포함해 하루도 빠짐없이 날짜별 일정을 만드세요.
 - 하루 3~5개 방문지를 시간순으로 배치하고 이동 부담이 큰 지역 간 왕복을 피하세요.

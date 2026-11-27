@@ -100,10 +100,11 @@ try{
  await ai.route("**/functions/v1/travel-assistant",async route=>{
   if(route.request().method()==="OPTIONS")return route.fulfill({status:200,headers:{"access-control-allow-origin":origin,"access-control-allow-methods":"POST, OPTIONS","access-control-allow-headers":"authorization, apikey, content-type, x-client-info"} ,body:"ok"});
   const action=route.request().postDataJSON().action;actions.push(action);
-  let body={ok:true};
+  let body={ok:true,amadeusConfigured:true,amadeusEnvironment:"test"};
   if(action==="generate")body={ok:true,itinerary:{suggestedDestination:"일본 오사카",overview:"실제 장소를 확인하는 여행",tips:["교통 패스를 미리 확인하세요."],recommendations:[{name:"Osaka Castle",category:"명소",reason:"대표 역사 명소",query:"Osaka Castle, Osaka"}],days:[{date:route.request().postDataJSON().trip.startDate,theme:"오사카 성 주변",items:[{time:"10:00",name:"Osaka Castle",category:"명소",query:"Osaka Castle, Osaka",reason:"역사 명소"}]}]}};
   if(action==="places")body={ok:true,places:[{id:"mock-osaka-castle",name:"Osaka Castle",address:"1-1 Osakajo, Chuo Ward, Osaka, Japan",location:{latitude:34.6873,longitude:135.5262},rating:4.5,ratingCount:1000,mapsUrl:"https://maps.google.com/?q=Osaka+Castle"}]};
   if(action==="route")body={ok:true,duration:"600s",distanceMeters:1200,encodedPolyline:"}_ilE}~qpX?gE"};
+  if(action==="airport-search")body={ok:true,airports:[{iataCode:"KIX",name:"Kansai International Airport",cityName:"Osaka",countryName:"Japan",subType:"AIRPORT"}]};
   if(action==="flight-search")body={ok:true,provider:"Amadeus",environment:"test",flights:[{offerId:"flight-mock-1",price:320000,currency:"KRW",airlineNames:"Korean Air",flightNumbers:"KE721",duration:"PT1H50M",stops:0,legs:[{from:"ICN",to:"KIX",departureAt:"2026-12-23T09:00:00",arrivalAt:"2026-12-23T10:50:00",flightNumber:"KE721"}]}]};
   if(action==="hotel-search")body={ok:true,provider:"Amadeus",environment:"test",cityCode:"OSA",cityName:"Osaka",hotels:[{hotelId:"hotel-mock-1",offerId:"offer-mock-1",name:"WAYPOINT Test Hotel",address:"Umeda, Osaka, Japan",rating:4,price:45000,currency:"JPY",room:"Deluxe Twin",refundable:true,breakfast:true}]};
   return route.fulfill({status:200,contentType:"application/json",headers:{"access-control-allow-origin":origin},body:JSON.stringify(body)});
@@ -132,6 +133,11 @@ try{
  await ai.waitForFunction(()=>document.querySelector("#userLabel")?.textContent==="Smoke",null,{timeout:15000});
  await ai.locator("#newTripTop").click();
  await ai.locator('input[name="destination"]').fill("일본 오사카");
+ await ai.locator('input[name="departureAirport"]').fill("Incheon");
+ await ai.locator('input[name="arrivalAirport"]').fill("Kansai");
+ await ai.waitForFunction(()=>document.querySelector("#wp-airport-options")?.options.length>0,null,{timeout:10000});
+ await ai.locator('input[name="departureAirport"]').fill("ICN");
+ await ai.locator('input[name="arrivalAirport"]').fill("KIX");
  const start=await ai.locator('input[name="startDate"]').inputValue();
  await ai.locator('input[name="endDate"]').fill(start);
  await ai.locator("#wp-wizard-next").click();

@@ -10,8 +10,8 @@
       <div class="section-title"><div><span class="eyebrow">LIVE TRAVEL SEARCH</span><h2>항공권 · 숙소 검색</h2><p class="muted">공급자 API에서 반환한 실제 검색 결과를 표시합니다. 예약 확정이나 결제는 별도 공급자 절차에서 진행해야 합니다.</p></div><span class="wp-live-label">실시간 API 연동</span></div>
       <div class="wp-search-tabs"><button type="button" class="active" data-search-tab="flight">✈ 항공권</button><button type="button" data-search-tab="hotel">⌂ 숙소</button></div>
       <form id="wp-flight-form" class="wp-search-form">
-        <label>출발 공항 (IATA)<input name="origin" maxlength="3" value="${esc(trip.departureAirport||"ICN")}" placeholder="ICN" required></label>
-        <label>도착 공항 (IATA)<input name="destination" maxlength="3" value="${esc(trip.arrivalAirport||"")}" placeholder="KIX" required></label>
+        <label>출발 공항 (IATA)<input name="origin" list="wp-flight-airports" value="${esc(trip.departureAirport||"ICN")}" placeholder="ICN" required></label>
+        <label>도착 공항 (IATA)<input name="destination" list="wp-flight-airports" value="${esc(trip.arrivalAirport||"")}" placeholder="KIX" required></label>
         <label>출발일<input name="departureDate" type="date" value="${esc(trip.startDate||"")}" required></label>
         <label>귀국일<input name="returnDate" type="date" value="${esc(trip.endDate||"")}"></label>
         <label>성인<input name="adults" type="number" min="1" max="9" value="${Math.max(1,Number(trip.adults)||Number(trip.travelers)||2)}"></label>
@@ -30,13 +30,16 @@
         <label>최대 검색 결과<select name="maxResults"><option value="10">10개</option><option value="20" selected>20개</option><option value="30">30개</option></select></label>
         <button class="button primary" type="submit">숙소 검색</button>
       </form>
-      <div class="wp-search-status" id="wp-search-status" aria-live="polite">검색을 시작하면 공급자 API의 실제 결과가 여기에 표시됩니다.</div>
+      <datalist id="wp-flight-airports"></datalist><div class="wp-search-status" id="wp-search-status" aria-live="polite">검색을 시작하면 공급자 API의 실제 결과가 여기에 표시됩니다.</div>
       <div class="wp-filter-row" id="wp-hotel-filters" hidden><label>최대 1박 요금<input id="wp-max-price" type="text" inputmode="numeric" placeholder="제한 없음"></label><label>최소 등급<select id="wp-min-rating"><option value="0">전체</option><option value="3">3성급 이상</option><option value="4">4성급 이상</option><option value="5">5성급</option></select></label><label>정렬<select id="wp-hotel-sort"><option value="price">가격 낮은 순</option><option value="rating">등급 높은 순</option></select></label><label class="wp-check"><input id="wp-refundable" type="checkbox"> 무료 취소 조건만</label></div>
       <div id="wp-search-results" class="wp-search-results"></div>
       <div class="wp-provider-note">검색 공급자: Amadeus Self-Service API. API 키가 설정되지 않았거나 계정의 상품 권한이 없는 경우 결과가 표시되지 않습니다. Agoda·Trip.com 직접 요금 비교 및 결제 API는 제휴 승인이 별도로 필요합니다.</div>`;
     host.prepend(section);
     const flightForm=$(section,"#wp-flight-form"),hotelForm=$(section,"#wp-hotel-form"),status=$(section,"#wp-search-status"),results=$(section,"#wp-search-results"),filters=$(section,"#wp-hotel-filters");
     let active="flight",hotelData=[];
+    const airportList=$(section,"#wp-flight-airports");
+    const airportInputs=[flightForm.elements.origin,flightForm.elements.destination];let airportTimer=null;airportInputs.forEach(input=>input.addEventListener("input",()=>{clearTimeout(airportTimer);const keyword=input.value.trim();if(keyword.length<2)return;airportTimer=setTimeout(async()=>{try{const r=await api.request("airport-search",{keyword});airportList.innerHTML=(r.airports||[]).map(a=>`<option value="${a.iataCode}" label="${a.name} · ${a.cityName||""}"></option>`).join("")}catch(_){/* Manual IATA entry remains available. */}},350)}));
+    api.request("status").then(s=>{if(!s.amadeusConfigured)status.textContent="항공·숙소 검색 API 키가 아직 연결되지 않았습니다. Supabase Secrets에 Amadeus Client ID/Secret을 등록하면 실제 검색이 활성화됩니다."}).catch(()=>{});
     section.querySelectorAll("[data-search-tab]").forEach(b=>b.addEventListener("click",()=>{active=b.dataset.searchTab;section.querySelectorAll("[data-search-tab]").forEach(x=>x.classList.toggle("active",x===b));flightForm.hidden=active!=="flight";hotelForm.hidden=active!=="hotel";filters.hidden=active!=="hotel";results.innerHTML="";status.textContent=active==="flight"?"출발지와 도착지 공항 코드를 입력해 항공편을 검색하세요.":"도시와 숙박 날짜를 입력해 숙소를 검색하세요."}));
     function busy(message){status.textContent=message;results.innerHTML='<div class="wp-loading">실제 공급자 데이터를 불러오는 중입니다…</div>'}
     flightForm.addEventListener("submit",async e=>{e.preventDefault();const f=new FormData(flightForm),payload=Object.fromEntries(f.entries());payload.origin=String(payload.origin).trim().toUpperCase();payload.destination=String(payload.destination).trim().toUpperCase();payload.adults=Number(payload.adults);payload.children=Number(payload.children)||0;payload.nonStop=f.get("nonStop")==="on";if(!/^[A-Z]{3}$/.test(payload.origin)||!/^[A-Z]{3}$/.test(payload.destination)){status.textContent="공항 코드는 영문 3자리 IATA 코드로 입력해 주세요. 예: ICN, KIX";results.innerHTML="";return}if(payload.returnDate&&payload.returnDate<payload.departureDate){status.textContent="귀국일은 출발일 이후여야 합니다.";return}busy("항공편 가격과 여정을 검색하고 있습니다…");try{const r=await api.request("flight-search",payload);const rows=r.flights||[];status.textContent=rows.length+"개 항공편을 찾았습니다 · "+(r.environment||"Amadeus");results.innerHTML=rows.map((x,i)=>flightCard(x,i)).join("")||'<div class="wp-empty">조건에 맞는 항공편이 없습니다. 날짜나 공항을 바꿔 검색해 주세요.</div>';results.querySelectorAll("[data-flight-save]").forEach(b=>b.onclick=()=>saveFlight(rows[Number(b.dataset.flightSave)]))}catch(err){status.textContent=err.message;results.innerHTML='<div class="wp-error">'+esc(err.message)+'</div>'}});
