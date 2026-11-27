@@ -117,12 +117,16 @@ async function loadNormalized(t){
 }
 async function callAssistant(action,payload={},timeout=45000){
  if(!supabaseAvailable)throw new Error("온라인 서비스 연결을 사용할 수 없습니다. 인터넷 연결과 Supabase 스크립트 로딩 상태를 확인해 주세요.");
- const {data}=await db.auth.getSession();const token=data.session?.access_token;
+ const {data}=await db.auth.getSession(),token=data.session?.access_token;
  if(!token)throw new Error("AI 기능을 이용하려면 먼저 로그인해 주세요.");
- const response=await fetch(SUPABASE_URL+"/functions/v1/travel-assistant",{method:"POST",headers:{apikey:SUPABASE_KEY,Authorization:"Bearer "+token,"Content-Type":"application/json"},body:JSON.stringify({action,...payload}),signal:AbortSignal.timeout(timeout)});
- const dataJson=await response.json().catch(()=>({error:"서버 응답을 읽지 못했습니다."}));
- if(!response.ok||dataJson.ok===false)throw new Error(dataJson.error||"요청에 실패했습니다. ("+response.status+")");
- return dataJson;
+ let attempt=0;
+ while(true){
+  const response=await fetch(SUPABASE_URL+"/functions/v1/travel-assistant",{method:"POST",headers:{apikey:SUPABASE_KEY,Authorization:"Bearer "+token,"Content-Type":"application/json"},body:JSON.stringify({action,...payload}),signal:AbortSignal.timeout(timeout)});
+  const result=await response.json().catch(()=>({error:"서버 응답을 읽지 못했습니다."}));
+  if(response.ok&&result.ok!==false)return result;
+  if(action==="generate"&&attempt===0&&(response.status===502||response.status===503)){attempt++;continue}
+  throw new Error(result.error||"요청에 실패했습니다. ("+response.status+")");
+ }
 }
 async function flushPendingSync(){
  if(!state.user||!navigator.onLine||!state.pendingSync?.length)return;
