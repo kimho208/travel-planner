@@ -102,6 +102,8 @@ export interface Trip {
   notes: Note[];
   savedPlaces?: Place[];
   recommendations?: Place[];
+  travelerNames?: string[];
+  routeLegs?: Array<{ mode: string; legs: Array<{ durationSeconds: number; distanceMeters: number; provider: string }> }>;
   status: "upcoming" | "completed" | string;
   overview?: string;
   tips?: string[];
@@ -114,6 +116,7 @@ export interface LocalCacheV3 {
   activeId: string | null;
   saved: Place[];
   updatedAt: string;
+  pendingSync?: string[];
 }
 /** Legacy cache shape accepted by the in-place migration. */
 export interface LocalCacheV2 {
