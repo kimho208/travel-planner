@@ -1,10 +1,11 @@
-const CACHE_NAME = "waypoint-v18";
+const CACHE_NAME = "waypoint-v19";
 const ASSETS = [
   "./",
   "./index.html",
   "./css/v2.css",
   "./js/core/store.js",
   "./js/features/planning.js",
+  "./js/storage/attachments.js",
   "./js/v2.js",
   "./manifest.json",
   "./assets/icons/icon.svg"
