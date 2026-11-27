@@ -169,9 +169,16 @@ function createTripModal(){
  $("#createTripForm").onsubmit=createTrip;
 }
 async function createTrip(e){
- e.preventDefault();if(state.loading)return;if(!state.user){toast("먼저 설정에서 로그인해 주세요.");closeModal();switchView("settings");return}
+ e.preventDefault();if(state.loading)return;
  const f=new FormData(e.currentTarget),t={id:uid(),destination:String(f.get("destination")).trim(),startDate:f.get("startDate"),endDate:f.get("endDate"),travelers:Number(f.get("travelers")),targetBudget:Number(f.get("budget"))||0,transport:f.get("transport"),style:f.get("style"),status:"upcoming",itinerary:[],expenseItems:[],expenses:{},reservations:[],checklist:[],notes:[],recommendations:[],savedPlaces:[],preferences:{},tips:[]};
+ if(!t.destination){toast("여행지를 입력해 주세요.");return}
  if(t.endDate<t.startDate){toast("도착일은 출발일 이후여야 합니다.");return}
+ if(!state.user){
+  for(let date=t.startDate;date<=t.endDate;date=addDays(date,1))t.itinerary.push({date,theme:"자유 일정",items:[]});
+  t.checklist=makeStarterChecklist(t);
+  state.trips.unshift(t);state.activeId=t.id;await persistTrip(t,{quiet:true});
+  closeModal();state.tab="plan";switchView("trip");toast("여행을 이 기기에 저장했습니다. 로그인하면 계정 동기화를 사용할 수 있습니다.");return;
+ }
  state.loading=true;$("#submitCreate").disabled=true;$("#submitCreate").textContent="일정 구성 중…";setSync("AI 일정 생성 중","busy");
  try{
  const ai=await callAssistant("generate",{trip:{destination:t.destination,startDate:t.startDate,endDate:t.endDate,travelers:t.travelers,targetBudget:t.targetBudget,transport:t.transport,style:t.style,notes:f.get("notes")||""}},55000);
