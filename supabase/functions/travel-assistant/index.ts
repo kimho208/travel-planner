@@ -9,6 +9,52 @@ const cors = {
 function reply(body: unknown, status = 200) {
   return new Response(JSON.stringify(body), { status, headers: { ...cors, "Content-Type": "application/json; charset=utf-8", "Cache-Control": "no-store" } });
 }
+const itineraryResponseSchema = {
+  type: "OBJECT",
+  properties: {
+    suggestedDestination: { type: "STRING" },
+    overview: { type: "STRING" },
+    recommendations: { type: "ARRAY", minItems: 8, maxItems: 14, items: {
+      type: "OBJECT", properties: {
+        name: { type: "STRING" }, category: { type: "STRING", enum: ["명소", "식당", "카페", "쇼핑", "숙소"] },
+        reason: { type: "STRING" }, area: { type: "STRING" }, query: { type: "STRING" }
+      }, required: ["name", "category", "reason", "area", "query"]
+    }},
+    days: { type: "ARRAY", minItems: 1, maxItems: 60, items: {
+      type: "OBJECT", properties: {
+        date: { type: "STRING" }, theme: { type: "STRING" },
+        items: { type: "ARRAY", maxItems: 12, items: {
+          type: "OBJECT", properties: {
+            time: { type: "STRING" }, name: { type: "STRING" },
+            category: { type: "STRING" }, reason: { type: "STRING" },
+            area: { type: "STRING" }, query: { type: "STRING" }
+          }, required: ["time", "name", "category", "reason", "area", "query"]
+        }}
+      }, required: ["date", "theme", "items"]
+    }},
+    tips: { type: "ARRAY", maxItems: 12, items: { type: "STRING" } }
+  },
+  required: ["overview", "recommendations", "days", "tips"]
+};
+function validateGeneratedItinerary(value: Record<string, any>, trip: Record<string, any>) {
+  if (!value || typeof value !== "object" || !Array.isArray(value.days) || !Array.isArray(value.recommendations) || !Array.isArray(value.tips)) throw new Error("AI 일정 응답의 필수 항목이 누락되었습니다.");
+  const start = Date.parse(String(trip.startDate) + "T00:00:00Z"), end = Date.parse(String(trip.endDate) + "T00:00:00Z");
+  if (!Number.isFinite(start) || !Number.isFinite(end) || end < start) throw new Error("여행 날짜 범위가 올바르지 않습니다.");
+  const expected = Math.floor((end - start) / 86400000) + 1;
+  if (expected > 60 || value.days.length !== expected) throw new Error("AI 일정의 날짜 수가 여행 기간과 일치하지 않습니다.");
+  const expectedDates = Array.from({ length: expected }, (_, i) => new Date(start + i * 86400000).toISOString().slice(0, 10));
+  const seen = new Set();
+  for (const day of value.days) {
+    if (!day || typeof day.date !== "string" || !expectedDates.includes(day.date) || seen.has(day.date) || !Array.isArray(day.items) || day.items.length > 12) throw new Error("날짜별 일정 구조가 올바르지 않습니다.");
+    seen.add(day.date);
+    for (const item of day.items) {
+      if (!item || typeof item.name !== "string" || !item.name.trim() || item.name.length > 160 || (item.time && !/^\\d{2}:\\d{2}$/.test(item.time))) throw new Error("일정에 올바르지 않은 장소 또는 시간이 포함되어 있습니다.");
+    }
+  }
+  if (seen.size !== expectedDates.length || !value.recommendations.length || value.recommendations.length > 14) throw new Error("일정 날짜 또는 추천 장소 수가 올바르지 않습니다.");
+  for (const place of value.recommendations) if (!place || typeof place.name !== "string" || !place.name.trim() || place.name.length > 160 || typeof place.query !== "string") throw new Error("추천 장소 데이터가 올바르지 않습니다.");
+  return value;
+}
 function jsonFromText(text: string) {
   const clean = text.replace(/^\s*```(?:json)?/i, "").replace(/```\s*$/, "").trim();
   const start = clean.indexOf("{"), end = clean.lastIndexOf("}");
@@ -66,7 +112,7 @@ JSON 외의 텍스트나 마크다운은 반환하지 마세요.`;
         body: JSON.stringify({
           systemInstruction: { parts: [{ text: "당신은 근거 없는 여행 정보를 만들지 않는 일정 설계 전문가입니다. 구조화된 JSON만 출력합니다." }] },
           contents: [{ role: "user", parts: [{ text: prompt }] }],
-          generationConfig: { responseMimeType: "application/json", temperature: 0.35, maxOutputTokens: 8000, thinkingConfig: { thinkingLevel: "LOW" } }
+          generationConfig: { responseMimeType: "application/json", responseSchema: itineraryResponseSchema, temperature: 0.35, maxOutputTokens: 8000, thinkingConfig: { thinkingLevel: "LOW" } }
         })
         , signal: AbortSignal.timeout(35000)
       });
@@ -84,8 +130,7 @@ JSON 외의 텍스트나 마크다운은 반환하지 마세요.`;
     if (!response.ok) { console.error("[travel-assistant] Gemini upstream status:", response.status, result?.error?.status || "unknown"); return reply({ error: result?.error?.message || "Gemini 요청에 실패했습니다.", upstreamStatus: response.status }, response.status === 429 ? 429 : response.status === 503 ? 503 : 502); }
     try {
       const text = result?.candidates?.[0]?.content?.parts?.map((p: { text?: string }) => p.text || "").join("") || "";
-      const itinerary = jsonFromText(text);
-      if (!Array.isArray(itinerary.days) || !itinerary.days.length) throw new Error("날짜별 일정이 비어 있습니다.");
+      const itinerary = validateGeneratedItinerary(jsonFromText(text), trip);
       return reply({ ok: true, itinerary, model: "gemini-3.8-flash" });
     } catch (error) { return reply({ error: error instanceof Error ? error.message : "AI 응답을 처리하지 못했습니다." }, 502); }
   }
