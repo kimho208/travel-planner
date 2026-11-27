@@ -137,19 +137,26 @@ async function persistTrip(t,{quiet=false}={}){
  let result=t.createdAt?await db.from("trips").update(row).eq("id",t.id).select().single():await db.from("trips").insert(row).select().single();
  if(result.error&&result.error.code==="23505")result=await db.from("trips").update(row).eq("id",t.id).select().single();
  if(result.error){state.pendingSync=Array.from(new Set([...(state.pendingSync||[]),t.id]));localCache();setSync("연결 대기 · 기기에 보관","bad");if(!quiet)toast("온라인 저장에 실패했습니다. 변경 내용은 기기에 보관하고 연결 복구 후 다시 시도합니다.");return false}
- t.createdAt=result.data.created_at;await syncNormalized(t);state.pendingSync=(state.pendingSync||[]).filter(id=>id!==t.id);localCache();setSync("모든 변경 저장됨");if(!quiet)toast("여행 정보를 저장했습니다.");return true;
+ t.createdAt=result.data.created_at;try{await syncNormalized(t)}catch(syncError){state.pendingSync=Array.from(new Set([...(state.pendingSync||[]),t.id]));localCache();setSync("세부 정보 동기화 대기","bad");if(!quiet)toast("여행 기본 정보는 저장됐지만 세부 항목 동기화에 실패했습니다. 다시 연결되면 재시도합니다.");return false}state.pendingSync=(state.pendingSync||[]).filter(id=>id!==t.id);localCache();setSync("모든 변경 저장됨");if(!quiet)toast("여행 정보를 저장했습니다.");return true;
+}
+async function reconcileTripRows(table,tripId,rows){
+ const ids=rows.map(x=>x.id).filter(Boolean);
+ if(rows.length){const {error}=await db.from(table).upsert(rows,{onConflict:"id"});if(error)throw error}
+ let query=db.from(table).delete().eq("trip_id",tripId);
+ if(ids.length)query=query.not("id","in","("+ids.join(",")+")");
+ const {error}=await query;if(error)throw error;
 }
 async function syncNormalized(t){
  const days=tripDays(t);const dayRows=days.map((d,i)=>({trip_id:t.id,day_date:d.date,position:i,theme:d.theme||""}));
- if(dayRows.length){const {data,error}=await db.from("trip_days").upsert(dayRows,{onConflict:"trip_id,day_date"}).select("id,day_date");if(!error){const byDate=Object.fromEntries(data.map(x=>[x.day_date,x.id]));const stops=days.flatMap(d=>dayStops(d).map((s,i)=>({id:stopId(s),trip_id:t.id,day_id:byDate[d.date],position:i,place_id:s.placeId||null,name:s.name,category:s.category||"place",address:s.address||null,latitude:s.location?.latitude??s.latitude??null,longitude:s.location?.longitude??s.longitude??null,start_time:s.time||null,end_time:s.endTime||null,note:s.note||"",planned_cost:Number(s.cost)||0,currency:s.currency||"KRW",source:s.source||"ai"})).filter(x=>x.day_id));if(stops.length)await db.from("trip_stops").upsert(stops,{onConflict:"id"});const keep=stops.map(x=>x.id);let cleanup=db.from("trip_stops").delete().eq("trip_id",t.id);if(keep.length)cleanup=cleanup.not("id","in","("+keep.join(",")+")");await cleanup}}
+ const {data:dayData,error:dayError}=dayRows.length?await db.from("trip_days").upsert(dayRows,{onConflict:"trip_id,day_date"}).select("id,day_date"):{data:[],error:null};if(dayError)throw dayError;const byDate=Object.fromEntries((dayData||[]).map(x=>[x.day_date,x.id]));const stops=days.flatMap(d=>dayStops(d).map((s,i)=>({id:stopId(s),trip_id:t.id,day_id:byDate[d.date],position:i,place_id:s.placeId||null,name:s.name,category:s.category||"place",address:s.address||null,latitude:s.location?.latitude??s.latitude??null,longitude:s.location?.longitude??s.longitude??null,start_time:s.time||null,end_time:s.endTime||null,note:s.note||"",planned_cost:Number(s.cost)||0,currency:s.currency||"KRW",source:s.source||"ai"})).filter(x=>x.day_id));if(stops.length){const {error}=await db.from("trip_stops").upsert(stops,{onConflict:"id"});if(error)throw error}const keep=stops.map(x=>x.id);let cleanup=db.from("trip_stops").delete().eq("trip_id",t.id);if(keep.length)cleanup=cleanup.not("id","in","("+keep.join(",")+")");const {error:stopCleanupError}=await cleanup;if(stopCleanupError)throw stopCleanupError;let dayCleanup=db.from("trip_days").delete().eq("trip_id",t.id);if(dayRows.length)dayCleanup=dayCleanup.not("day_date","in","("+dayRows.map(x=>'"'+x.day_date+'"').join(",")+")");const {error:dayCleanupError}=await dayCleanup;if(dayCleanupError)throw dayCleanupError;
  const rs=reservations(t).map(x=>({id:x.id||uid(),trip_id:t.id,reservation_type:x.type||"other",provider:x.provider||"",confirmation_code:x.confirmationCode||"",title:x.title||"",origin:x.origin||null,destination:x.destination||null,flight_number:x.flightNumber||null,departure_at:x.departureAt||null,arrival_at:x.arrivalAt||null,check_in_at:x.checkInAt||null,check_out_at:x.checkOutAt||null,status:x.status||"planned",price:x.price===""?null:Number(x.price)||null,currency:x.currency||"KRW",details:x.details||{}}));
- if(rs.length)await db.from("trip_reservations").upsert(rs,{onConflict:"id"});
+ await reconcileTripRows("trip_reservations",t.id,rs);
  const es=tripExpenses(t).map(x=>({id:x.id||uid(),trip_id:t.id,title:x.title,category:x.category||"other",amount:Number(x.amount)||0,currency:x.currency||"KRW",amount_krw:Number(x.amountKrw)||0,exchange_rate:Number(x.rate)||1,rate_date:x.rateDate||null,paid_by:x.paidBy||"",split_type:x.splitType||"equal",spent_at:x.date||today(),note:x.note||""}));
- if(es.length)await db.from("trip_expenses").upsert(es,{onConflict:"id"});
+ await reconcileTripRows("trip_expenses",t.id,es);
  const cs=checklist(t).map((x,i)=>({id:x.id||uid(),trip_id:t.id,category:x.category||"tasks",title:x.title,is_done:!!x.done,priority:x.priority||"normal",due_at:x.dueDate||null,assigned_to:x.assignee||"",note:x.note||"",source:x.source||"manual",position:i}));
- if(cs.length)await db.from("trip_checklist_items").upsert(cs,{onConflict:"id"});
+ await reconcileTripRows("trip_checklist_items",t.id,cs);
  const ns=notes(t).map(x=>({id:x.id||uid(),trip_id:t.id,stop_id:x.stopId||null,title:x.title||"",content:x.content||""}));
- if(ns.length)await db.from("trip_notes").upsert(ns,{onConflict:"id"});
+ await reconcileTripRows("trip_notes",t.id,ns);
 }
 function renderAll(){renderHome();renderTrips();renderSaved();if(state.view==="trip")renderTrip()}
 function switchView(view){
