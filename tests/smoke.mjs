@@ -106,6 +106,7 @@ try{
   if(action==="route")body={ok:true,duration:"600s",distanceMeters:1200,encodedPolyline:"}_ilE}~qpX?gE"};
   if(action==="airport-search")body={ok:true,airports:[{iataCode:"KIX",name:"Kansai International Airport",cityName:"Osaka",countryName:"Japan",subType:"AIRPORT"}]};
   if(action==="flight-search")body={ok:true,provider:"Amadeus",environment:"test",flights:[{offerId:"flight-mock-1",price:320000,currency:"KRW",airlineNames:"Korean Air",flightNumbers:"KE721",duration:"PT1H50M",stops:0,legs:[{from:"ICN",to:"KIX",departureAt:"2026-12-23T09:00:00",arrivalAt:"2026-12-23T10:50:00",flightNumber:"KE721"}]}]};
+  if(action==="hotel-discovery")body={ok:true,provider:"Google Places",city:"Osaka",hotels:[{provider:"Google Places",hotelId:"google-place-mock-1",name:"WAYPOINT Test Hotel",address:"Umeda, Osaka, Japan",rating:4.4,ratingCount:125,mapsUrl:"https://maps.google.com/?q=WAYPOINT+Test+Hotel",website:"https://example.com",phone:"+81 6 0000 0000",location:{latitude:34.7,longitude:135.5}}]};
   if(action==="hotel-search")body={ok:true,provider:"Amadeus",environment:"test",cityCode:"OSA",cityName:"Osaka",hotels:[{hotelId:"hotel-mock-1",offerId:"offer-mock-1",name:"WAYPOINT Test Hotel",address:"Umeda, Osaka, Japan",rating:4,price:45000,currency:"JPY",room:"Deluxe Twin",refundable:true,breakfast:true}]};
   return route.fulfill({status:200,contentType:"application/json",headers:{"access-control-allow-origin":origin},body:JSON.stringify(body)});
  });
@@ -185,7 +186,8 @@ try{
  await ai.waitForTimeout(800);
  console.log("HOTEL SEARCH DIAGNOSTICS",JSON.stringify({actions,status:await ai.locator("#wp-search-status").innerText(),results:await ai.locator("#wp-search-results").innerText(),checkIn:await ai.locator("#wp-hotel-form input[name=checkInDate]").inputValue(),checkOut:await ai.locator("#wp-hotel-form input[name=checkOutDate]").inputValue()}));
  await ai.locator(".wp-result-card").filter({hasText:"WAYPOINT Test Hotel"}).waitFor();
- assert.ok(actions.includes("hotel-search"),"Hotel search should call the supplier API");
+ assert.ok(actions.includes("hotel-discovery"),"Hotel search should retrieve real Google Places hotel listings");
+ assert.ok(actions.includes("hotel-search"),"Hotel search should also request supplier room rates when configured");
  await ai.locator("#addReservation").click();
  console.log("RESERVATION MODAL DIAGNOSTICS",JSON.stringify({modal:await ai.locator("#modalContent").innerText(),open:await ai.locator("#modalBackdrop").getAttribute("class"),errors:aiErrors}));
  await ai.locator("#reservationForm").waitFor({timeout:5000});
