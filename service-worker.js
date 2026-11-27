@@ -1,4 +1,4 @@
-const CACHE_NAME = "waypoint-v17";
+const CACHE_NAME = "waypoint-v18";
 const ASSETS = [
   "./",
   "./index.html",
@@ -44,7 +44,7 @@ self.addEventListener("fetch", (event) => {
       }
       return response;
     } catch {
-      const cached = await caches.match(event.request);
+      const cached = await caches.match(event.request,{ignoreSearch:true});
       if (cached) return cached;
       if (event.request.mode === "navigate") {
         const fallback = await caches.match(assetURL("./index.html"));
