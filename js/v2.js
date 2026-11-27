@@ -1,6 +1,18 @@
 const SUPABASE_URL="https://ukpywdzvewvsvuirujnr.supabase.co";
 const SUPABASE_KEY="sb_publishable_sSrnespomiRYE0P3wfkX_w_ardc0wun";
-const db=(()=>{try{return window.supabase?.createClient?window.supabase.createClient(SUPABASE_URL,SUPABASE_KEY):null}catch(error){console.warn("Supabase 초기화 실패:",error);return null}})();
+function offlineSupabase(){
+ const issue={message:"온라인 계정 연결을 사용할 수 없습니다. 네트워크 연결을 확인해 주세요.",code:"OFFLINE"};
+ const query=new Proxy({}, {get(_target,key){if(key==="then")return resolve=>resolve({data:null,error:issue});if(key==="single")return async()=>({data:null,error:issue});return()=>query}});
+ return {auth:{
+  getSession:async()=>({data:{session:null},error:null}),
+  onAuthStateChange:()=>({data:{subscription:{unsubscribe(){}}}}),
+  signOut:async()=>({error:issue}),signUp:async()=>({data:null,error:issue}),
+  signInWithPassword:async()=>({data:null,error:issue}),
+  resetPasswordForEmail:async()=>({error:issue}),updateUser:async()=>({error:issue})
+ },from:()=>query};
+}
+const supabaseAvailable=!!window.supabase?.createClient;
+const db=(()=>{try{return supabaseAvailable?window.supabase.createClient(SUPABASE_URL,SUPABASE_KEY):offlineSupabase()}catch(error){console.warn("Supabase 초기화 실패:",error);return offlineSupabase()}})();
 const safeGet=(key,fallback=null)=>{try{const value=localStorage.getItem(key);return value===null?fallback:value}catch(error){console.warn("로컬 저장소 읽기 실패:",error);return fallback}};
 const safeSet=(key,value)=>{try{localStorage.setItem(key,value);return true}catch(error){console.warn("로컬 저장소 쓰기 실패:",error);return false}};
 const parseStored=(key,fallback)=>{try{const raw=safeGet(key);return raw===null?fallback:JSON.parse(raw)}catch(error){console.warn("저장 데이터 형식 오류:",key,error);return fallback}};
@@ -32,7 +44,7 @@ function normalizeTrip(row){
  for(const d of itinerary)for(const s of dayStops(d))stopId(s);
  return {id:row.id,destination:row.destination,startDate:row.start_date,endDate:row.end_date,travelers:row.travelers||1,targetBudget:Number(row.target_budget)||0,style:row.travel_style||"균형 잡힌 여행",transport:row.transport||"대중교통",preferences:row.preferences||{},itinerary,expenses:row.expenses||{},expenseItems:Array.isArray(row.expenses?.items)?row.expenses.items:[],checklist:Array.isArray(row.checklist)?row.checklist:[],reservations:Array.isArray(row.preferences?.reservations)?row.preferences.reservations:[],notes:Array.isArray(row.preferences?.notes)?row.preferences.notes:[],savedPlaces:Array.isArray(row.preferences?.savedPlaces)?row.preferences.savedPlaces:[],recommendations:Array.isArray(row.preferences?.recommendations)?row.preferences.recommendations:[],status:row.status||"upcoming",overview:row.preferences?.overview||"",tips:row.preferences?.tips||[],createdAt:row.created_at};
 }
-const LOCAL_SCHEMA_VERSION=2;
+const LOCAL_SCHEMA_VERSION=3;
 function localCache(){return safeSet("waypoint-v2-cache",JSON.stringify({schemaVersion:LOCAL_SCHEMA_VERSION,trips:state.trips,activeId:state.activeId,saved:state.saved,updatedAt:new Date().toISOString()}))}
 function restoreLocal(){
  const x=parseStored("waypoint-v2-cache",null);
@@ -46,7 +58,7 @@ function restoreLocal(){
  return true;
 }
 async function refreshAuth(){
- if(!db){state.session=null;state.user=null;restoreLocal();updateAccountUI();setSync("기기 저장 · 온라인 계정 연결 불가","bad");renderAll();return}
+ if(!supabaseAvailable){state.session=null;state.user=null;restoreLocal();updateAccountUI();setSync("기기 저장 · 온라인 계정 연결 불가","bad");renderAll();return}
  try{
   const {data,error}=await db.auth.getSession();
   if(error)throw error;
@@ -387,7 +399,7 @@ function boot(){
   document.documentElement.dataset.appReady="true";
   if("serviceWorker" in navigator)navigator.serviceWorker.register("./service-worker.js").catch(error=>console.warn("오프라인 캐시 등록 실패:",error));
   refreshAuth();
-  if(db)db.auth.onAuthStateChange((_event,session)=>{state.session=session;state.user=session?.user||null;updateAccountUI();if(session)loadCloudTrips()});
+  if(supabaseAvailable)db.auth.onAuthStateChange((_event,session)=>{state.session=session;state.user=session?.user||null;updateAccountUI();if(session)loadCloudTrips()});
  }catch(error){
   console.error("WAYPOINT 시작 오류:",error);
   const notice=document.createElement("div");notice.setAttribute("role","alert");notice.style.cssText="position:fixed;z-index:99999;left:16px;right:16px;bottom:16px;padding:16px;border-radius:12px;background:#7b302b;color:white;box-shadow:0 8px 30px #0003";
