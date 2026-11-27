@@ -362,9 +362,17 @@ function addRecommendation(t,name){
  const p=(t.recommendations||[]).find(x=>x.name===name);const d=tripDays(t)[state.day]||tripDays(t)[0];if(!d){toast("먼저 날짜별 일정을 만들어 주세요.");return}
  d.items.push({id:uid(),name:p.name,time:"",category:p.category,reason:p.reason,query:p.query,source:"recommendation"});persistTrip(t,{quiet:true});setTab("plan");enrichTripPlaces(t).then(()=>persistTrip(t,{quiet:true}));
 }
+async function renderReservationAttachments(t){
+ const host=$("#reservationAttachments");if(!host)return;
+ try{const files=await window.WaypointFiles.list(t.id);host.innerHTML='<h3>이 기기에 보관된 예약 파일</h3><p class="muted">파일은 현재 브라우저의 기기 저장소에만 보관되며 Supabase 계정으로 업로드되지 않습니다.</p>'+(files.map(x=>'<div class="expense-item"><div><b>'+esc(x.name)+'</b><small>'+Math.round(x.size/1024)+' KB · '+dateText(x.createdAt.slice(0,10))+'</small></div><div><button class="tiny-btn" data-file-download="'+x.id+'">열기</button><button class="tiny-btn" data-file-delete="'+x.id+'">삭제</button></div></div>').join("")||'<p class="muted">저장된 파일이 없습니다.</p>');
+ $("[data-file-download]").forEach(b=>b.onclick=async()=>{try{const file=await window.WaypointFiles.get(b.dataset.fileDownload);if(!file)return;const url=URL.createObjectURL(file.blob),a=document.createElement("a");a.href=url;a.download=file.name;a.target="_blank";a.click();setTimeout(()=>URL.revokeObjectURL(url),30000)}catch(e){toast("파일을 열지 못했습니다: "+e.message)}});
+ $("[data-file-delete]").forEach(b=>b.onclick=async()=>{if(!confirm("이 기기에 저장된 파일을 삭제할까요?"))return;await window.WaypointFiles.remove(b.dataset.fileDelete);renderReservationAttachments(t)});
+ }catch(error){host.innerHTML='<p class="muted">이 브라우저에서는 파일 보관 기능을 사용할 수 없습니다: '+esc(error.message)+'</p>'}
+}
 function renderReservations(t){
  const items=reservations(t);
  $("#panel-reservations").innerHTML=`<div class="section-title"><div><span class="eyebrow">BOOKING DETAILS</span><h2>예약 정보</h2></div><button class="button primary" id="addReservation">＋ 예약 추가</button></div><div class="notice">항공권·숙소 확인서 PDF 또는 이미지에서 정보를 읽어 초안을 만들 수 있습니다. 저장 전에 추출 결과를 확인하고 수정할 수 있습니다. 항공편 실시간 운항 상태 조회는 별도 항공 데이터 제공업체 연동이 필요합니다.</div><div class="reservation-grid">${items.map(reservationCard).join("")||'<div class="empty-small">등록된 예약이 없습니다. 항공권이나 숙소 정보를 추가해 보세요.</div>'}</div><div class="surface" style="margin-top:16px"><h3>예약 확인서에서 정보 가져오기</h3><p class="muted">PDF, JPG, PNG 파일을 선택하면 항공편·숙소 정보를 추출해 입력 양식에 채웁니다.</p><input id="reservationFile" type="file" accept=".pdf,image/png,image/jpeg,image/webp"><div id="extractStatus" class="muted"></div></div>`;
+ renderReservationAttachments(t);
  $("#addReservation").onclick=()=>reservationModal(t);
  $("#reservationFile").onchange=e=>extractReservation(e.target.files?.[0],t);
  $$("[data-res-edit]").forEach(b=>b.onclick=()=>reservationModal(t,b.dataset.resEdit));
@@ -380,6 +388,7 @@ function inputDate(v){if(!v)return"";const d=new Date(v);return isNaN(d)?"":new 
 async function deleteReservation(t,id){if(!confirm("예약 정보를 삭제할까요?"))return;t.reservations=reservations(t).filter(x=>x.id!==id);await db.from("trip_reservations").delete().eq("id",id);await persistTrip(t,{quiet:true});renderReservations(t)}
 async function extractReservation(file,t){
  if(!file)return;$("#extractStatus").textContent="파일을 읽고 예약 정보를 분석하고 있습니다…";
+ try{await window.WaypointFiles.save(t.id,file);renderReservationAttachments(t)}catch(error){toast("예약 파일 보관 실패: "+error.message)}
  try{
  let text="",image=null;
  if(file.type==="application/pdf"){
