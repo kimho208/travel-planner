@@ -279,8 +279,9 @@ function moveStopBy(t,dayIndex,id,delta){
 function moveStopToDay(t,id,targetDay){
  const sourceIndex=tripDays(t).findIndex(d=>dayStops(d).some(x=>x.id===id));
  if(sourceIndex<0||targetDay<0||targetDay>=tripDays(t).length||sourceIndex===targetDay)return;
+ state.routeUndo={tripId:t.id,itinerary:JSON.parse(JSON.stringify(tripDays(t)))};
  const source=dayStops(tripDays(t)[sourceIndex]),index=source.findIndex(x=>x.id===id),[item]=source.splice(index,1);
- dayStops(tripDays(t)[targetDay]).push(item);state.day=targetDay;state.routeUndo={tripId:t.id,itinerary:JSON.parse(JSON.stringify(tripDays(t)))};
+ dayStops(tripDays(t)[targetDay]).push(item);state.day=targetDay;
  persistTrip(t,{quiet:true});renderPlan(t);toast("다른 날짜로 일정을 이동했습니다.");
 }
 function moveStopModal(t,id){
