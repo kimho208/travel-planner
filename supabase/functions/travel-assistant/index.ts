@@ -123,7 +123,7 @@ Deno.serve(async (req: Request) => {
     if (!Deno.env.get("AMADEUS_CLIENT_ID") || !Deno.env.get("AMADEUS_CLIENT_SECRET")) return reply({ error: "항공편 실시간 검색을 사용하려면 Supabase Secrets에 AMADEUS_CLIENT_ID와 AMADEUS_CLIENT_SECRET을 등록해야 합니다.", setupRequired: ["AMADEUS_CLIENT_ID", "AMADEUS_CLIENT_SECRET"] }, 424);
     const origin = String(body.origin || "").trim().toUpperCase(), destination = String(body.destination || "").trim().toUpperCase();
     const departureDate = body.departureDate, returnDate = body.returnDate ? String(body.returnDate) : "";
-    const adults = Math.max(1, Math.min(9, Number(body.adults) || 1)), children = Math.max(0, Math.min(8, Number(body.children) || 0));
+    const adults = Math.max(1, Math.min(9, Number(body.adults) || 1)), children = Math.max(0, Math.min(8, Number(body.children) || 0)), infants = Math.max(0, Math.min(adults, Number(body.infants) || 0));
     if (!/^[A-Z]{3}$/.test(origin) || !/^[A-Z]{3}$/.test(destination)) return reply({ error: "출발·도착 공항은 3자리 IATA 코드로 입력해 주세요." }, 400);
     if (!validDate(departureDate) || (returnDate && (!validDate(returnDate) || returnDate <= String(departureDate)))) return reply({ error: "출발일 또는 귀국일이 올바르지 않습니다." }, 400);
     const travelClass = ["ECONOMY","PREMIUM_ECONOMY","BUSINESS","FIRST"].includes(String(body.travelClass)) ? String(body.travelClass) : "ECONOMY";
@@ -131,6 +131,7 @@ Deno.serve(async (req: Request) => {
       const params: Record<string, string> = { originLocationCode: origin, destinationLocationCode: destination, departureDate: String(departureDate), adults: String(adults), currencyCode: "KRW", max: "20", travelClass, nonStop: String(body.nonStop === true) };
       if (returnDate) params.returnDate = returnDate;
       if (children > 0) params.children = String(children);
+      if (infants > 0) params.infants = String(infants);
       const data = await amadeusGet("/v2/shopping/flight-offers", params);
       const carriers = data.dictionaries?.carriers || {};
       const flights = (data.data || []).map((offer: Record<string, any>) => {
@@ -138,8 +139,8 @@ Deno.serve(async (req: Request) => {
           const segments = (it.segments || []).map((seg: Record<string, any>) => ({ from: seg.departure?.iataCode || "", to: seg.arrival?.iataCode || "", departureAt: seg.departure?.at || "", arrivalAt: seg.arrival?.at || "", carrier: seg.carrierCode || "", carrierName: carriers[seg.carrierCode] || seg.carrierCode || "", flightNumber: (seg.carrierCode || "") + (seg.number || ""), duration: seg.duration || "" }));
           return { duration: it.duration || "", segments };
         });
-        const segments = itineraries.flatMap((it: Record<string, any>) => it.segments);
-        return { offerId: offer.id || "", price: Number(offer.price?.grandTotal || offer.price?.total || 0), currency: offer.price?.currency || "KRW", airlineNames: [...new Set(segments.map((s: Record<string, any>) => s.carrierName))].join(", "), flightNumbers: segments.map((s: Record<string, any>) => s.flightNumber).join(" / "), duration: itineraries.map((it: Record<string, any>) => it.duration).join(" · "), stops: Math.max(0, ...itineraries.map((it: Record<string, any>) => Math.max(0, it.segments.length - 1))), legs: segments, itineraries };
+        const segments = itineraries.flatMap((it: Record<string, any>) => it.segments), outbound = itineraries[0]?.segments || [], returnSegments = itineraries[1]?.segments || [];
+        return { offerId: offer.id || "", price: Number(offer.price?.grandTotal || offer.price?.total || 0), currency: offer.price?.currency || "KRW", airlineNames: [...new Set(segments.map((s: Record<string, any>) => s.carrierName))].join(", "), flightNumbers: segments.map((s: Record<string, any>) => s.flightNumber).join(" / "), duration: itineraries.map((it: Record<string, any>) => it.duration).join(" · "), stops: Math.max(0, ...itineraries.map((it: Record<string, any>) => Math.max(0, it.segments.length - 1))), legs: outbound, returnLegs: returnSegments, itineraries };
       });
       return reply({ ok: true, provider: "Amadeus", environment: Deno.env.get("AMADEUS_ENV") === "production" ? "production" : "test", flights });
     } catch (error) { return reply({ error: error instanceof Error ? error.message : "항공편 검색에 실패했습니다." }, 502); }

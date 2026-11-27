@@ -51,7 +51,7 @@
   $("#wp-wizard-back").onclick=()=>show(Math.max(0,step-1));
   $("#wp-wizard-next").onclick=()=>{const required=[...steps[step].querySelectorAll("[required]")];for(const el of required)if(!el.reportValidity())return;if(step===0&&form.elements.endDate.value<form.elements.startDate.value){alert("여행 종료일은 출발일 이후여야 합니다.");return}show(Math.min(2,step+1))};
   form.elements.budget.addEventListener("input",e=>{const n=e.target.value.replace(/[^0-9]/g,"");e.target.value=n?Number(n).toLocaleString("ko-KR"):""});
-  form.onsubmit=e=>{if(form.elements.endDate.value<form.elements.startDate.value){e.preventDefault();show(0);alert("여행 종료일은 출발일 이후여야 합니다.");return}for(const name of ["departureAirport","arrivalAirport"]){const code=form.elements[name].value.trim();if(code&&!/^[A-Z]{3}$/.test(code)){e.preventDefault();show(0);alert("공항은 자동완성 목록에서 선택하거나 3자리 IATA 코드로 입력해 주세요.");return}}if(typeof window.createTrip==="function")window.createTrip(e);else{e.preventDefault();alert("여행 생성 모듈을 불러오지 못했습니다. 새로고침해 주세요.")}};
+  form.onsubmit=e=>{if(form.elements.endDate.value<form.elements.startDate.value){e.preventDefault();show(0);alert("여행 종료일은 출발일 이후여야 합니다.");return}for(const name of ["departureAirport","arrivalAirport"]){const code=form.elements[name].value.trim().toUpperCase();form.elements[name].value=code;if(code&&!/^[A-Z]{3}$/.test(code)){e.preventDefault();show(0);alert("공항은 자동완성 목록에서 선택하거나 3자리 IATA 코드로 입력해 주세요.");return}}if(typeof window.createTrip==="function")window.createTrip(e);else{e.preventDefault();alert("여행 생성 모듈을 불러오지 못했습니다. 새로고침해 주세요.")}};
   show(0);
  }
  function init(){["#createHero","#heroCreate","#emptyCreate","#newTripTop","#createTrips"].forEach(sel=>{const el=$(sel);if(el)el.onclick=open})}
