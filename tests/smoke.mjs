@@ -147,7 +147,9 @@ try{
  await ai.locator('input[name="title"]').fill("공항 리무진");
  await ai.locator('input[name="amount"]').fill("18000");
  await ai.locator("#expenseForm button.button.primary").click();
- await ai.locator(".expense-item").filter({hasText:"공항 리무진"}).waitFor();
+ await ai.waitForTimeout(500);
+ console.log("EXPENSE DIAGNOSTICS",JSON.stringify(await ai.evaluate(()=>({panel:document.querySelector("#panel-budget")?.innerText.slice(0,900),modal:document.querySelector("#modalContent")?.innerText.slice(0,300),cache:JSON.parse(localStorage.getItem("waypoint-v2-cache")||"{}").trips?.[0]?.expenseItems}))),"PAGE ERRORS",JSON.stringify(errors));
+ await ai.locator(".expense-item").filter({hasText:"공항 리무진"}).waitFor({timeout:10000});
  assert.ok(await ai.locator(".settlement-panel").isVisible(),"Budget view should include group settlement");
  await ai.locator("#tripTabs [data-tab=notes]").click();
  await ai.locator("#addNote").click();
