@@ -486,19 +486,28 @@ async function authSubmit(){
 }
 async function forgotPassword(){const email=$("#authEmail").value.trim();if(!email){toast("비밀번호 재설정 메일을 받을 이메일을 입력해 주세요.");return}const {error}=await db.auth.resetPasswordForEmail(email,{redirectTo:location.origin+location.pathname+"?reset=1"});toast(error?"요청 실패: "+error.message:"비밀번호 재설정 이메일을 보냈습니다.")}
 function setAuthMode(mode){$$("[data-auth-mode]").forEach(x=>x.classList.toggle("active",x.dataset.authMode===mode));$("#authNameWrap").hidden=mode!=="signup";$("#authSubmit").textContent=mode==="signup"?"회원가입":"로그인"}
-async function saveBackup(){const blob=new Blob([JSON.stringify({version:2,trips:state.trips,saved:state.saved},null,2)],{type:"application/json"});const a=document.createElement("a");a.href=URL.createObjectURL(blob);a.download="waypoint-backup-"+today()+".json";a.click();URL.revokeObjectURL(a.href)}
+async function saveBackup(){const blob=new Blob([JSON.stringify({schemaVersion:3,exportedAt:new Date().toISOString(),trips:state.trips,saved:state.saved,pendingSync:state.pendingSync||[]},null,2)],{type:"application/json"});const a=document.createElement("a");a.href=URL.createObjectURL(blob);a.download="waypoint-backup-"+today()+".json";a.click();URL.revokeObjectURL(a.href)}
 async function restoreBackup(file){
  if(!file)return;
  try{
   if(file.size>10*1024*1024)throw new Error("백업 파일은 10MB 이하만 복원할 수 있습니다.");
   const x=JSON.parse(await file.text());
-  if(!x||typeof x!=="object"||!Array.isArray(x.trips))throw new Error("백업 파일 형식이 올바르지 않습니다.");
-  const validTrips=x.trips.filter(t=>t&&typeof t==="object"&&typeof t.id==="string"&&typeof t.destination==="string"&&Array.isArray(t.itinerary||[]));
-  if(validTrips.length!==x.trips.length)throw new Error("여행 데이터에 올바르지 않은 항목이 포함되어 있습니다. 기존 데이터는 유지했습니다.");
-  if(x.saved!==undefined&&!Array.isArray(x.saved))throw new Error("저장 장소 데이터 형식이 올바르지 않습니다.");
-  state.trips=validTrips;state.saved=x.saved||[];state.activeId=state.trips[0]?.id||null;
+  if(!x||typeof x!=="object"||Array.isArray(x)||!Array.isArray(x.trips)||x.trips.length>500)throw new Error("백업 파일 구조가 올바르지 않습니다.");
+  const validTrips=x.trips.map((t,index)=>{
+   if(!t||typeof t!=="object"||typeof t.id!=="string"||!t.id||typeof t.destination!=="string"||!t.destination.trim()||t.destination.length>200)throw new Error((index+1)+"번째 여행의 기본 정보가 올바르지 않습니다.");
+   if(!Array.isArray(t.itinerary)||t.itinerary.length>60)throw new Error((index+1)+"번째 여행의 일정 구조가 올바르지 않습니다.");
+   for(const [dayIndex,day] of t.itinerary.entries()){
+    if(!day||typeof day.date!=="string"||!/^\d{4}-\d{2}-\d{2}$/.test(day.date)||!Array.isArray(day.items)||day.items.length>200)throw new Error((index+1)+"번째 여행의 "+(dayIndex+1)+"일차 일정이 올바르지 않습니다.");
+    for(const stop of day.items){if(!stop||typeof stop.name!=="string"||!stop.name.trim()||stop.name.length>300)throw new Error("장소 이름이 비어 있거나 너무 깁니다.");const loc=stop.location;if(loc&&(!Number.isFinite(Number(loc.latitude))||!Number.isFinite(Number(loc.longitude))||Math.abs(Number(loc.latitude))>90||Math.abs(Number(loc.longitude))>180))throw new Error("장소 좌표가 올바르지 않습니다.")}
+   }
+   const travelers=Number(t.travelers)||1;if(travelers<1||travelers>50)throw new Error("여행 인원은 1~50명이어야 합니다.");
+   return {...t,travelers};
+  });
+  if(x.saved!==undefined&&(!Array.isArray(x.saved)||x.saved.length>1000||x.saved.some(p=>!p||typeof p.name!=="string"||p.name.length>300)))throw new Error("저장 장소 데이터 형식이 올바르지 않습니다.");
+  if(!confirm("기존 기기의 여행 데이터를 가져온 백업 내용으로 대체합니다. 복원 전에 현재 데이터를 백업하셨나요?"))return;
+  state.trips=validTrips;state.saved=x.saved||[];state.activeId=state.trips[0]?.id||null;state.pendingSync=[];
   if(!localCache())throw new Error("기기의 저장 공간에 기록하지 못했습니다. 저장 공간을 확인해 주세요.");
-  renderAll();toast("백업을 복원했습니다. 로그인 상태라면 여행별로 저장해 주세요.");
+  renderAll();toast("백업을 복원했습니다. 계정 동기화는 각 여행을 저장할 때 진행됩니다.");
  }catch(e){toast("복원 실패: "+e.message)}
 }
 async function deleteTrip(id){if(!confirm("이 여행을 삭제할까요? 관련 일정·지출·예약·메모도 함께 삭제됩니다."))return;const t=state.trips.find(x=>x.id===id);if(state.user){const {error}=await db.from("trips").delete().eq("id",id);if(error){toast("삭제 실패: "+error.message);return}}state.trips=state.trips.filter(x=>x.id!==id);if(state.activeId===id)state.activeId=state.trips[0]?.id||null;localCache();renderTrips();renderHome();switchView("trips");toast("여행을 삭제했습니다.")}
