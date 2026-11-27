@@ -37,7 +37,7 @@ const itineraryResponseSchema = {
   required: ["overview", "recommendations", "days", "tips"]
 };
 function validateGeneratedItinerary(value: Record<string, any>, trip: Record<string, any>) {
-  if (!value || typeof value !== "object" || !Array.isArray(value.days) || !Array.isArray(value.recommendations) || !Array.isArray(value.tips)) throw new Error("AI 일정 응답의 필수 항목이 누락되었습니다.");
+  if (!value || typeof value !== "object" || typeof value.overview !== "string" || !Array.isArray(value.days) || !Array.isArray(value.recommendations) || !Array.isArray(value.tips)) throw new Error("AI 일정 응답의 필수 항목이 누락되었습니다.");
   const start = Date.parse(String(trip.startDate) + "T00:00:00Z"), end = Date.parse(String(trip.endDate) + "T00:00:00Z");
   if (!Number.isFinite(start) || !Number.isFinite(end) || end < start) throw new Error("여행 날짜 범위가 올바르지 않습니다.");
   const expected = Math.floor((end - start) / 86400000) + 1;
@@ -45,14 +45,15 @@ function validateGeneratedItinerary(value: Record<string, any>, trip: Record<str
   const expectedDates = Array.from({ length: expected }, (_, i) => new Date(start + i * 86400000).toISOString().slice(0, 10));
   const seen = new Set();
   for (const day of value.days) {
-    if (!day || typeof day.date !== "string" || !expectedDates.includes(day.date) || seen.has(day.date) || !Array.isArray(day.items) || day.items.length > 12) throw new Error("날짜별 일정 구조가 올바르지 않습니다.");
+    if (!day || typeof day.date !== "string" || !expectedDates.includes(day.date) || seen.has(day.date) || typeof day.theme !== "string" || !Array.isArray(day.items) || day.items.length > 12) throw new Error("날짜별 일정 구조가 올바르지 않습니다.");
     seen.add(day.date);
     for (const item of day.items) {
-      if (!item || typeof item.name !== "string" || !item.name.trim() || item.name.length > 160 || (item.time && !/^\\d{2}:\\d{2}$/.test(item.time))) throw new Error("일정에 올바르지 않은 장소 또는 시간이 포함되어 있습니다.");
+      if (!item || typeof item.name !== "string" || !item.name.trim() || item.name.length > 160 || typeof item.query !== "string" || (item.time && !/^\\d{2}:\\d{2}$/.test(item.time))) throw new Error("일정에 올바르지 않은 장소 또는 시간이 포함되어 있습니다.");
     }
   }
-  if (seen.size !== expectedDates.length || !value.recommendations.length || value.recommendations.length > 14) throw new Error("일정 날짜 또는 추천 장소 수가 올바르지 않습니다.");
+  if (seen.size !== expectedDates.length || value.recommendations.length < 8 || value.recommendations.length > 14 || value.tips.some((tip: unknown) => typeof tip !== "string")) throw new Error("일정 날짜 또는 추천 장소 수가 올바르지 않습니다.");
   for (const place of value.recommendations) if (!place || typeof place.name !== "string" || !place.name.trim() || place.name.length > 160 || typeof place.query !== "string") throw new Error("추천 장소 데이터가 올바르지 않습니다.");
+  value.days.sort((a: Record<string, any>, b: Record<string, any>) => a.date.localeCompare(b.date));
   return value;
 }
 function jsonFromText(text: string) {
