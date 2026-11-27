@@ -93,7 +93,7 @@ try{
  const ai=await browser.newPage({viewport:{width:1440,height:1000}});
  const aiErrors=[];
  const actions=[];
- ai.on("pageerror",e=>aiErrors.push(e.message));
+ ai.on("pageerror",e=>aiErrors.push(e.stack||e.message));
  const origin=new URL(baseURL).origin;
  await ai.route("**/functions/v1/travel-assistant",async route=>{
   if(route.request().method()==="OPTIONS")return route.fulfill({status:200,headers:{"access-control-allow-origin":origin,"access-control-allow-methods":"POST, OPTIONS","access-control-allow-headers":"authorization, apikey, content-type, x-client-info"} ,body:"ok"});
