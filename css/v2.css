@@ -73,3 +73,10 @@ body[data-theme=dark]{--bg:#141a17;--paper:#1e2722;--ink:#edf2ee;--muted:#a0aca4
 :where(button,a,input,select,textarea,[tabindex]):focus-visible{outline:3px solid #2b8060;outline-offset:3px}
 @media(max-width:760px){.tiny-btn,.icon-button,.trip-tab,.filter,.day-chip{min-height:44px;min-width:44px}.stop-actions .tiny-btn{min-height:44px}}
 @media(prefers-reduced-motion:reduce){*,*::before,*::after{scroll-behavior:auto!important;animation-duration:.01ms!important;animation-iteration-count:1!important;transition-duration:.01ms!important}}
+
+.style-checks{border:1px solid var(--line,#e5e9e5);border-radius:12px;padding:12px;margin:0}
+.style-checks legend{font-weight:600;padding:0 5px}
+.style-check-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px}
+.style-check-grid label{display:flex;align-items:center;gap:7px;font-size:13px;min-height:36px}
+.style-check-grid input{accent-color:#287a55}
+@media(max-width:600px){.style-check-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
