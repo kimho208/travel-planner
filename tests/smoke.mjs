@@ -61,7 +61,7 @@ try{
  await offline.locator("#view-trip.active").waitFor({timeout:10000});
  await offline.waitForFunction(()=>JSON.parse(localStorage.getItem("waypoint-v2-cache")||"null")?.trips?.some(t=>t.destination==="로컬 저장 테스트"),null,{timeout:5000});
  const savedCache=await offline.evaluate(()=>JSON.parse(localStorage.getItem("waypoint-v2-cache")));
- assert.equal(savedCache.schemaVersion,2,"Local cache must be stored with a schema version");
+ assert.equal(savedCache.schemaVersion,3,"Local cache must be stored with a schema version");
  assert.equal(savedCache.trips[0].destination,"로컬 저장 테스트","Offline-created trip must persist locally");
  assert.equal(offlineErrors.length,0,"Missing Supabase and corrupt local cache must not throw: "+offlineErrors.join("; "));
  await offline.close();
