@@ -25,7 +25,26 @@ try{
  await page.locator("#createHero").click();
  assert.ok(await page.locator("#createTripForm").isVisible(),"Trip creation form opens");
  await page.locator("#modalClose").click();
- 
+
+ // Startup must remain usable if Supabase CDN is unavailable and local cache JSON is damaged.
+ const offline=await browser.newPage({viewport:{width:390,height:844}});
+ const offlineErrors=[];
+ offline.on("pageerror",e=>offlineErrors.push(e.message));
+ await offline.route("https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2",route=>route.abort());
+ await offline.addInitScript(()=>{
+  localStorage.setItem("waypoint-v2-cache","{broken-json");
+  localStorage.setItem("waypoint-v2-saved","{also-broken");
+ });
+ await offline.goto(baseURL,{waitUntil:"domcontentloaded",timeout:60000});
+ await offline.waitForFunction(()=>document.documentElement.dataset.appReady==="true",null,{timeout:15000});
+ assert.ok(await offline.locator(".home-hero").isVisible(),"Offline-only startup must render homepage");
+ assert.ok(await offline.locator("#createHero").isVisible(),"Offline-only mode must retain local trip creation");
+ assert.ok(await offline.locator("#authForm").evaluate(el=>el.hidden),"Authentication form must be disabled without Supabase SDK");
+ await offline.locator("#createHero").click();
+ assert.ok(await offline.locator("#createTripForm").isVisible(),"Offline-only trip creation form opens");
+ assert.equal(offlineErrors.length,0,"Missing Supabase and corrupt local cache must not throw: "+offlineErrors.join("; "));
+ await offline.close();
+
  // Authenticated test session: external AI and database services are mocked, never billed.
  const ai=await browser.newPage({viewport:{width:1440,height:1000}});
  const aiErrors=[];
