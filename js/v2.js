@@ -369,12 +369,6 @@ function renderDiscover(t){
  $$("[data-add-recommend]").forEach(b=>b.onclick=()=>addRecommendation(t,b.dataset.addRecommend));
 }
 function placeCard(p){return `<article class="place-card"><div><h4>${esc(p.name)}</h4><p>${esc(p.address||p.area||p.reason||p.category||"추천 장소")}</p><span class="rating">${p.rating?"★ "+p.rating+" ("+(p.ratingCount||0)+")":""}</span></div><div class="place-actions"><button class="tiny-btn" data-add-recommend="${esc(p.name)}">일정에 추가</button><button class="tiny-btn" data-save-place="${esc(p.name)}">저장</button>${p.mapsUrl?'<a class="tiny-btn" href="'+esc(p.mapsUrl)+'" target="_blank" rel="noopener">지도 보기</a>':""}</div></article>`}
- e.preventDefault();const q=$("#placeQuery").value.trim();$("#placeSearchResults").innerHTML='<div class="empty-small">장소를 검색하고 있습니다…</div>';
- try{const r=await callAssistant("places",{query:q},18000);state.lastSearch=r.places||[];$("#placeSearchResults").innerHTML=state.lastSearch.map(p=>placeCard({...p,reason:p.address})).join("")||'<div class="empty-small">검색 결과가 없습니다.</div>';$$("[data-add-recommend]").forEach(b=>b.onclick=()=>addPlaceFromSearch(b.dataset.addRecommend))}catch(err){$("#placeSearchResults").innerHTML='<div class="notice">'+esc(err.message)+'</div>'}
-}
- const p=(t.recommendations||[]).find(x=>x.name===name);const d=tripDays(t)[state.day]||tripDays(t)[0];if(!d){toast("먼저 날짜별 일정을 만들어 주세요.");return}
- d.items.push({id:uid(),name:p.name,time:"",category:p.category,reason:p.reason,query:p.query,source:"recommendation"});persistTrip(t,{quiet:true});setTab("plan");enrichTripPlaces(t).then(()=>persistTrip(t,{quiet:true}));
-}
 async function renderReservationAttachments(t){
  const host=$("#reservationAttachments");if(!host)return;
  try{const files=await window.WaypointFiles.list(t.id);host.innerHTML='<h3>이 기기에 보관된 예약 파일</h3><p class="muted">파일은 현재 브라우저의 기기 저장소에만 보관되며 Supabase 계정으로 업로드되지 않습니다.</p>'+(files.map(x=>'<div class="expense-item"><div><b>'+esc(x.name)+'</b><small>'+Math.round(x.size/1024)+' KB · '+dateText(x.createdAt.slice(0,10))+'</small></div><div><button class="tiny-btn" data-file-download="'+x.id+'">열기</button><button class="tiny-btn" data-file-delete="'+x.id+'">삭제</button></div></div>').join("")||'<p class="muted">저장된 파일이 없습니다.</p>');
@@ -527,7 +521,6 @@ function bindResetPassword(){
 }
 function addRecommendation(t,name){const p=(t.recommendations||[]).find(x=>x.name===name);if(!p)return;const d=tripDays(t)[state.day]||tripDays(t)[0];if(!d){toast("먼저 일정을 생성해 주세요.");return}d.items.push({id:uid(),name:p.name,time:"",category:p.category,reason:p.reason,query:p.query,source:"recommendation"});persistTrip(t,{quiet:true});setTab("plan");enrichTripPlaces(t).then(()=>persistTrip(t,{quiet:true}))}
 function addPlaceFromSearch(name){const t=current(),p=state.lastSearch?.find(x=>x.name===name);if(!t)return;const d=tripDays(t)[state.day]||tripDays(t)[0];if(!d){toast("먼저 일정을 생성해 주세요.");return}d.items.push({id:uid(),name,address:p?.address||"",location:p?.location,placeId:p?.id,rating:p?.rating,mapsUrl:p?.mapsUrl,category:"장소",source:"places",verified:!!p});persistTrip(t,{quiet:true});setTab("plan");toast("일정에 추가했습니다.")}
-const originalSearchPlaces=searchPlaces;
 async function searchPlaces(e){e.preventDefault();const q=$("#placeQuery").value.trim();$("#placeSearchResults").innerHTML='<div class="empty-small">검색 중…</div>';try{const r=await callAssistant("places",{query:q},18000);state.lastSearch=r.places||[];$("#placeSearchResults").innerHTML=state.lastSearch.map(placeCard).join("")||'<div class="empty-small">검색 결과가 없습니다.</div>';$$("[data-add-recommend]").forEach(b=>b.onclick=()=>addPlaceFromSearch(b.dataset.addRecommend))}catch(err){$("#placeSearchResults").innerHTML='<div class="notice">'+esc(err.message)+'</div>'}}
 function wireDelegated(){
  document.addEventListener("click",e=>{const tab=e.target.closest("[data-open-tab]");if(tab){setTab(tab.dataset.openTab)}});
