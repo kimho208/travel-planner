@@ -76,7 +76,9 @@ try{
  assert.ok(await offline.locator("#createTripForm").isVisible(),"Offline-only trip creation form opens");
   assert.ok(await offline.locator('input[name="styles"]').count()>=5,"Trip setup should support multiple travel styles");
  await offline.locator('input[name="destination"]').fill("로컬 저장 테스트");
- await offline.locator("#wp-wizard-next").click();\n await offline.locator("#wp-wizard-next").click();\n await offline.locator("#submitCreate").click();
+ await offline.locator("#wp-wizard-next").click();
+ await offline.locator("#wp-wizard-next").click();
+ await offline.locator("#submitCreate").click();
  await offline.locator("#view-trip.active").waitFor({timeout:10000});
  await offline.locator("#panel-plan.active").waitFor({timeout:5000});
  const offlineTemplate=await offline.evaluate(()=>({cards:document.querySelectorAll("#panel-plan .stop-card").length,activeTab:document.querySelector(".trip-tab.active")?.dataset.tab,trip:JSON.parse(localStorage.getItem("waypoint-v2-cache")||"{}").trips?.[0]?.itinerary?.[0]}));
@@ -102,6 +104,8 @@ try{
   if(action==="generate")body={ok:true,itinerary:{suggestedDestination:"일본 오사카",overview:"실제 장소를 확인하는 여행",tips:["교통 패스를 미리 확인하세요."],recommendations:[{name:"Osaka Castle",category:"명소",reason:"대표 역사 명소",query:"Osaka Castle, Osaka"}],days:[{date:route.request().postDataJSON().trip.startDate,theme:"오사카 성 주변",items:[{time:"10:00",name:"Osaka Castle",category:"명소",query:"Osaka Castle, Osaka",reason:"역사 명소"}]}]}};
   if(action==="places")body={ok:true,places:[{id:"mock-osaka-castle",name:"Osaka Castle",address:"1-1 Osakajo, Chuo Ward, Osaka, Japan",location:{latitude:34.6873,longitude:135.5262},rating:4.5,ratingCount:1000,mapsUrl:"https://maps.google.com/?q=Osaka+Castle"}]};
   if(action==="route")body={ok:true,duration:"600s",distanceMeters:1200,encodedPolyline:"}_ilE}~qpX?gE"};
+  if(action==="flight-search")body={ok:true,provider:"Amadeus",environment:"test",flights:[{offerId:"flight-mock-1",price:320000,currency:"KRW",airlineNames:"Korean Air",flightNumbers:"KE721",duration:"PT1H50M",stops:0,legs:[{from:"ICN",to:"KIX",departureAt:"2026-12-23T09:00:00",arrivalAt:"2026-12-23T10:50:00",flightNumber:"KE721"}]}]};
+  if(action==="hotel-search")body={ok:true,provider:"Amadeus",environment:"test",cityCode:"OSA",cityName:"Osaka",hotels:[{hotelId:"hotel-mock-1",offerId:"offer-mock-1",name:"WAYPOINT Test Hotel",address:"Umeda, Osaka, Japan",rating:4,price:45000,currency:"JPY",room:"Deluxe Twin",refundable:true,breakfast:true}]};
   return route.fulfill({status:200,contentType:"application/json",headers:{"access-control-allow-origin":origin},body:JSON.stringify(body)});
  });
  await ai.route("https://api.frankfurter.dev/**",async route=>route.fulfill({status:200,contentType:"application/json",body:JSON.stringify({amount:1,base:"JPY",date:"2026-11-25",rates:{KRW:9.3}})}));
@@ -130,7 +134,9 @@ try{
  await ai.locator('input[name="destination"]').fill("일본 오사카");
  const start=await ai.locator('input[name="startDate"]').inputValue();
  await ai.locator('input[name="endDate"]').fill(start);
- await ai.locator("#wp-wizard-next").click();\n await ai.locator("#wp-wizard-next").click();\n await ai.locator("#submitCreate").click();
+ await ai.locator("#wp-wizard-next").click();
+ await ai.locator("#wp-wizard-next").click();
+ await ai.locator("#submitCreate").click();
  await ai.locator("#panel-plan.active").waitFor({timeout:30000});
  await ai.locator(".stop-card").filter({hasText:"Osaka Castle"}).waitFor({timeout:15000});
  assert.ok(await ai.locator("#optimizeRoute").isVisible(),"Itinerary should expose route optimization");
@@ -159,6 +165,16 @@ try{
  await ai.locator(".note-card").filter({hasText:"여행 메모"}).waitFor();
  await ai.locator("#tripTabs [data-tab=reservations]").click();
  assert.ok(await ai.locator("#reservationAttachments").isVisible(),"Reservation view should include private attachment storage");
+ assert.ok(await ai.locator("#wp-flight-form").isVisible(),"Flight search should be available in the reservation workspace");
+ await ai.locator("#wp-flight-form input[name=origin]").fill("ICN");
+ await ai.locator("#wp-flight-form input[name=destination]").fill("KIX");
+ await ai.locator("#wp-flight-form button[type=submit]").click();
+ await ai.locator(".wp-result-card").filter({hasText:"Korean Air"}).waitFor();
+ assert.ok(actions.includes("flight-search"),"Flight search should call the supplier API");
+ await ai.locator("[data-search-tab=hotel]").click();
+ await ai.locator("#wp-hotel-form").locator("button[type=submit]").click();
+ await ai.locator(".wp-result-card").filter({hasText:"WAYPOINT Test Hotel"}).waitFor();
+ assert.ok(actions.includes("hotel-search"),"Hotel search should call the supplier API");
  await ai.locator("#addReservation").click();
  await ai.locator('input[name="title"]').fill("인천-간사이 왕복");
  await ai.locator("#reservationForm button.button.primary").click();
