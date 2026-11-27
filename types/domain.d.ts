@@ -93,6 +93,9 @@ export interface Trip {
   targetBudget: number;
   style?: string;
   transport?: string;
+  styles?: string[];
+  budgetLevel?: "value" | "balanced" | "premium";
+  hotelArea?: string;
   preferences?: Record<string, unknown>;
   itinerary: Day[];
   expenses?: Record<string, unknown>;
