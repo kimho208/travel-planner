@@ -144,9 +144,9 @@ try{
  await ai.locator(".task").filter({hasText:"eSIM 설치 확인"}).waitFor();
  await ai.locator("#tripTabs [data-tab=budget]").click();
  await ai.locator("#addExpense").click();
- await ai.locator('input[name="title"]').fill("공항 리무진");
- await ai.locator('input[name="amount"]').fill("18000");
- await ai.locator("#expenseForm button.button.primary").click();
+ await ai.locator('#expenseForm input[name="title"]').fill("공항 리무진");
+ await ai.locator('#expenseForm input[name="amount"]').fill("18000");
+ await ai.locator("#expenseForm").evaluate(form=>form.requestSubmit());
  await ai.waitForTimeout(500);
  console.log("EXPENSE DIAGNOSTICS",JSON.stringify(await ai.evaluate(()=>({panel:document.querySelector("#panel-budget")?.innerText.slice(0,900),modal:document.querySelector("#modalContent")?.innerText.slice(0,300),cache:JSON.parse(localStorage.getItem("waypoint-v2-cache")||"{}").trips?.[0]?.expenseItems}))),"PAGE ERRORS",JSON.stringify(errors));
  await ai.locator(".expense-item").filter({hasText:"공항 리무진"}).waitFor({timeout:10000});
