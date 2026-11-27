@@ -26,5 +26,12 @@ function makeICS(trip){
  (trip.itinerary||[]).forEach(day=>(day.items||[]).forEach((item,index)=>{const start=String(item.time||"09:00").replace(":","")+"00",end=String(item.endTime||"").replace(":","")+"00";lines.push("BEGIN:VEVENT","UID:"+(item.id||trip.id+"-"+day.date+"-"+index)+"@waypoint","DTSTAMP:"+stamp,"DTSTART;TZID=Asia/Seoul:"+String(day.date).replace(/-/g,"")+"T"+start);if(end)lines.push("DTEND;TZID=Asia/Seoul:"+String(day.date).replace(/-/g,"")+"T"+end);lines.push("SUMMARY:"+esc(item.name),"LOCATION:"+esc(item.address||""),"DESCRIPTION:"+esc(item.note||item.reason||""),"END:VEVENT")}));
  lines.push("END:VCALENDAR");return lines.join("\r\n");
 }
-global.WaypointPlanning=Object.freeze({distanceKm,optimizeByNearestNeighbor,findScheduleConflicts,calculateSettlement,makeICS});
+function findTravelWarnings(items,route){
+ if(!route?.legs?.length)return [];
+ const parse=v=>{if(!/^\d{2}:\d{2}$/.test(v||""))return null;const [h,m]=v.split(":").map(Number);return h*60+m};
+ const located=items.filter(x=>x.location?.latitude&&x.location?.longitude),out=[];
+ for(let i=0;i<Math.min(located.length-1,route.legs.length);i++){const a=located[i],b=located[i+1],end=parse(a.endTime)??(parse(a.time)===null?null:parse(a.time)+(Number(a.durationMinutes)||60)),next=parse(b.time),travel=Math.ceil((Number(route.legs[i].durationSeconds)||0)/60);if(end!==null&&next!==null&&travel>0&&next-end<travel+15)out.push({kind:"travel-buffer",message:a.name+" → "+b.name+" 이동시간을 고려하면 일정 간격이 부족할 수 있습니다. (필요 약 "+(travel+15)+"분, 여유 "+Math.max(0,next-end)+"분)"})}
+ return out;
+}
+global.WaypointPlanning=Object.freeze({distanceKm,optimizeByNearestNeighbor,findScheduleConflicts,findTravelWarnings,calculateSettlement,makeICS});
 })(window);
