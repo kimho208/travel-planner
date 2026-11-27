@@ -58,6 +58,16 @@ function restoreLocal(){
  if(x.schemaVersion!==LOCAL_SCHEMA_VERSION)localCache();
  return true;
 }
+let localPersistTimer=null;
+store.subscribe(change=>{
+ const root=change.path?.[0];
+ if(root!=="trips"&&root!=="activeId"&&root!=="saved")return;
+ if(localPersistTimer!==null)clearTimeout(localPersistTimer);
+ localPersistTimer=setTimeout(()=>{
+  localPersistTimer=null;
+  if(!localCache())setSync("저장 공간 부족 · 백업 권장","bad");
+ },350);
+});
 async function refreshAuth(){
  if(!supabaseAvailable){state.session=null;state.user=null;restoreLocal();updateAccountUI();setSync("기기 저장 · 온라인 계정 연결 불가","bad");renderAll();return}
  try{
