@@ -44,11 +44,25 @@ try{
  });
  await offline.goto(baseURL,{waitUntil:"domcontentloaded",timeout:60000});
  await offline.waitForFunction(()=>document.documentElement.dataset.appReady==="true",null,{timeout:15000});
+ assert.ok(await offline.evaluate(()=>typeof window.WaypointStore?.createStore==="function"),"Central store must load before the application");
+ const storeNotifications=await offline.evaluate(()=>{
+  const testStore=window.WaypointStore.createStore({trips:[]});let changes=0;
+  testStore.subscribe(()=>changes++);testStore.getState().trips.push({id:"store-test"});
+  return changes;
+ });
+ assert.ok(storeNotifications>0,"Central store must notify subscribers about nested state changes");
  assert.ok(await offline.locator(".home-hero").isVisible(),"Offline-only startup must render homepage");
  assert.ok(await offline.locator("#createHero").isVisible(),"Offline-only mode must retain local trip creation");
  assert.ok(await offline.locator("#authForm").evaluate(el=>el.hidden),"Authentication form must be disabled without Supabase SDK");
  await offline.locator("#createHero").click();
  assert.ok(await offline.locator("#createTripForm").isVisible(),"Offline-only trip creation form opens");
+ await offline.locator('input[name="destination"]').fill("로컬 저장 테스트");
+ await offline.locator("#submitCreate").click();
+ await offline.locator("#view-trip.active").waitFor({timeout:10000});
+ await offline.waitForFunction(()=>JSON.parse(localStorage.getItem("waypoint-v2-cache")||"null")?.trips?.some(t=>t.destination==="로컬 저장 테스트"),null,{timeout:5000});
+ const savedCache=await offline.evaluate(()=>JSON.parse(localStorage.getItem("waypoint-v2-cache")));
+ assert.equal(savedCache.schemaVersion,2,"Local cache must be stored with a schema version");
+ assert.equal(savedCache.trips[0].destination,"로컬 저장 테스트","Offline-created trip must persist locally");
  assert.equal(offlineErrors.length,0,"Missing Supabase and corrupt local cache must not throw: "+offlineErrors.join("; "));
  await offline.close();
 
