@@ -25,6 +25,7 @@ try{
  });
  assert.deepEqual(planningCheck.optimized,["A","B","C"],"Nearest-neighbor route optimization should select nearest next stop");
  assert.equal(planningCheck.conflicts,1,"Overlapping appointment times should be detected");
+ assert.equal(await page.evaluate(()=>window.WaypointPlanning.findTravelWarnings([{name:"A",time:"10:00",endTime:"11:00",location:{latitude:1,longitude:1}},{name:"B",time:"11:20",location:{latitude:1.01,longitude:1.01}}],{legs:[{durationSeconds:1200}]}).length),1,"Insufficient travel buffers should be warned");
  assert.deepEqual(planningCheck.transfers,[{from:"B",to:"A",amount:5000}],"Expense settlement should calculate transfer");
  try{await page.waitForFunction(()=>document.documentElement.dataset.appReady==="true",null,{timeout:15000})}catch(e){console.log("BOOT DIAGNOSTICS",JSON.stringify(errors),JSON.stringify(await page.evaluate(()=>({scripts:[...document.scripts].map(x=>x.src),ready:document.documentElement.dataset.appReady,rail:!!document.querySelector("#rail")}))));throw e}
  assert.ok(await page.locator(".home-hero").isVisible(),"New homepage hero must render");
