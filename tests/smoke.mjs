@@ -74,9 +74,12 @@ try{
  assert.ok(await offline.locator("#authForm").evaluate(el=>el.hidden),"Authentication form must be disabled without Supabase SDK");
  await offline.locator("#createHero").click();
  assert.ok(await offline.locator("#createTripForm").isVisible(),"Offline-only trip creation form opens");
+  assert.ok(await offline.locator('input[name="styles"]').count()>=5,"Trip setup should support multiple travel styles");
  await offline.locator('input[name="destination"]').fill("로컬 저장 테스트");
  await offline.locator("#submitCreate").click();
  await offline.locator("#view-trip.active").waitFor({timeout:10000});
+ await offline.locator(".stop-card").first().waitFor({timeout:5000});
+ assert.equal(await offline.locator(".stop-card").count(),3,"Offline trip creation should build a daily starter template");
  await offline.waitForFunction(()=>JSON.parse(localStorage.getItem("waypoint-v2-cache")||"null")?.trips?.some(t=>t.destination==="로컬 저장 테스트"),null,{timeout:5000});
  const savedCache=await offline.evaluate(()=>JSON.parse(localStorage.getItem("waypoint-v2-cache")));
  assert.equal(savedCache.schemaVersion,3,"Local cache must be stored with a schema version");
@@ -128,6 +131,8 @@ try{
  await ai.locator("#submitCreate").click();
  await ai.locator("#panel-plan.active").waitFor({timeout:30000});
  await ai.locator(".stop-card").filter({hasText:"Osaka Castle"}).waitFor({timeout:15000});
+ assert.ok(await ai.locator("#optimizeRoute").isVisible(),"Itinerary should expose route optimization");
+ assert.ok(await ai.locator("#exportCalendar").isVisible(),"Itinerary should expose calendar export");
  assert.ok(actions.includes("generate"),"AI create action must call the generation endpoint");
  assert.ok(actions.includes("places"),"AI recommendations must be checked against Places");
  await ai.locator("#tripTabs [data-tab=prep]").click();
@@ -141,6 +146,7 @@ try{
  await ai.locator('input[name="amount"]').fill("18000");
  await ai.locator("#expenseForm button.button.primary").click();
  await ai.locator(".expense-item").filter({hasText:"공항 리무진"}).waitFor();
+ assert.ok(await ai.locator(".settlement-panel").isVisible(),"Budget view should include group settlement");
  await ai.locator("#tripTabs [data-tab=notes]").click();
  await ai.locator("#addNote").click();
  await ai.locator('input[name="title"]').fill("여행 메모");
@@ -148,6 +154,7 @@ try{
  await ai.locator("#noteForm button.button.primary").click();
  await ai.locator(".note-card").filter({hasText:"여행 메모"}).waitFor();
  await ai.locator("#tripTabs [data-tab=reservations]").click();
+ assert.ok(await ai.locator("#reservationAttachments").isVisible(),"Reservation view should include private attachment storage");
  await ai.locator("#addReservation").click();
  await ai.locator('input[name="title"]').fill("인천-간사이 왕복");
  await ai.locator("#reservationForm button.button.primary").click();
