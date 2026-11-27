@@ -68,3 +68,8 @@ body[data-theme=dark]{--bg:#141a17;--paper:#1e2722;--ink:#edf2ee;--muted:#a0aca4
 .weather-day span,.weather-day small{font-size:12px;color:var(--muted,#6c756e)}.weather-day strong{font-size:13px}
 @media(max-width:760px){.stop-card{grid-template-columns:34px minmax(0,1fr)}.stop-actions{grid-column:2;justify-content:flex-start}.settlement-grid{grid-template-columns:1fr}.route-controls{width:100%}.route-controls select{min-width:120px}}
 @media(prefers-reduced-motion:reduce){.stop-card{transition:none!important}}
+
+/* Accessibility: visible keyboard focus and touch targets */
+:where(button,a,input,select,textarea,[tabindex]):focus-visible{outline:3px solid #2b8060;outline-offset:3px}
+@media(max-width:760px){.tiny-btn,.icon-button,.trip-tab,.filter,.day-chip{min-height:44px;min-width:44px}.stop-actions .tiny-btn{min-height:44px}}
+@media(prefers-reduced-motion:reduce){*,*::before,*::after{scroll-behavior:auto!important;animation-duration:.01ms!important;animation-iteration-count:1!important;transition-duration:.01ms!important}}
