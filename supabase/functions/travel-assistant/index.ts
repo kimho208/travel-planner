@@ -145,6 +145,33 @@ Deno.serve(async (req: Request) => {
       return reply({ ok: true, provider: "Amadeus", environment: Deno.env.get("AMADEUS_ENV") === "production" ? "production" : "test", flights });
     } catch (error) { return reply({ error: error instanceof Error ? error.message : "항공편 검색에 실패했습니다." }, 502); }
   }
+  if (action === "hotel-discovery") {
+    const key = Deno.env.get("GOOGLE_MAPS_API_KEY");
+    if (!key) return reply({ error: "Google Places API 키가 등록되지 않았습니다. Supabase Secrets의 GOOGLE_MAPS_API_KEY를 확인해 주세요.", setupRequired: "GOOGLE_MAPS_API_KEY" }, 424);
+    const city = String(body.city || "").trim().slice(0, 100);
+    if (!city) return reply({ error: "검색할 도시를 입력해 주세요." }, 400);
+    const query = String(body.query || "").trim().slice(0, 120) || "hotels in " + city;
+    try {
+      const response = await fetch("https://places.googleapis.com/v1/places:searchText", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", "X-Goog-Api-Key": key, "X-Goog-FieldMask": "places.id,places.displayName,places.formattedAddress,places.location,places.rating,places.userRatingCount,places.googleMapsUri,places.websiteUri,places.nationalPhoneNumber" },
+        body: JSON.stringify({ textQuery: query, languageCode: "ko", regionCode: "KR", maxResultCount: Math.max(5, Math.min(20, Number(body.maxResults) || 15)) }),
+        signal: AbortSignal.timeout(15000)
+      });
+      const data = await response.json().catch(() => ({}));
+      if (!response.ok) return reply({ error: data?.error?.message || "Google 호텔 검색에 실패했습니다.", provider: "Google Places" }, response.status === 429 ? 429 : 502);
+      const hotels = (data.places || []).map((p: Record<string, any>) => ({
+        provider: "Google Places", hotelId: p.id || "", name: p.displayName?.text || "이름 미확인 숙소",
+        address: p.formattedAddress || "", location: p.location || null,
+        rating: Number(p.rating || 0), ratingCount: Number(p.userRatingCount || 0),
+        mapsUrl: p.googleMapsUri || (p.id ? "https://www.google.com/maps/search/?api=1&query_place_id=" + encodeURIComponent(p.id) : ""),
+        website: p.websiteUri || "", phone: p.nationalPhoneNumber || ""
+      })).filter((h: Record<string, any>) => h.name && h.hotelId);
+      return reply({ ok: true, provider: "Google Places", city, hotels });
+    } catch (error) {
+      return reply({ error: error instanceof Error ? error.message : "Google 호텔 검색 중 오류가 발생했습니다.", provider: "Google Places" }, 502);
+    }
+  }
   if (action === "hotel-search") {
     if (!Deno.env.get("AMADEUS_CLIENT_ID") || !Deno.env.get("AMADEUS_CLIENT_SECRET")) return reply({ error: "숙소 실시간 요금 검색을 사용하려면 Supabase Secrets에 AMADEUS_CLIENT_ID와 AMADEUS_CLIENT_SECRET을 등록해야 합니다.", setupRequired: ["AMADEUS_CLIENT_ID", "AMADEUS_CLIENT_SECRET"] }, 424);
     const cityInput = String(body.city || "").trim(), checkInDate = String(body.checkInDate || ""), checkOutDate = String(body.checkOutDate || "");
