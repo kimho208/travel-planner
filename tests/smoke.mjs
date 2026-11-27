@@ -19,6 +19,13 @@ try{
   return {name:state.profile.name,count:state.items.length,changes};
  });
  assert.deepEqual(storeCheck,{name:"after",count:1,changes:2},"Central store must publish nested object and array changes");
+ const planningCheck=await page.evaluate(()=>{
+  const P=window.WaypointPlanning,stops=[{name:"A",location:{latitude:35,longitude:139}},{name:"C",location:{latitude:35.02,longitude:139.02}},{name:"B",location:{latitude:35.001,longitude:139.001}}];
+  return {optimized:P.optimizeByNearestNeighbor(stops).map(x=>x.name),conflicts:P.findScheduleConflicts([{name:"A",time:"10:00",endTime:"11:00"},{name:"B",time:"10:30",endTime:"11:30"}]).length,transfers:P.calculateSettlement([{amountKrw:10000,paidBy:"A",splitType:"equal"}],["A","B"]).transfers};
+ });
+ assert.deepEqual(planningCheck.optimized,["A","B","C"],"Nearest-neighbor route optimization should select nearest next stop");
+ assert.equal(planningCheck.conflicts,1,"Overlapping appointment times should be detected");
+ assert.deepEqual(planningCheck.transfers,[{from:"B",to:"A",amount:5000}],"Expense settlement should calculate transfer");
  try{await page.waitForFunction(()=>document.documentElement.dataset.appReady==="true",null,{timeout:15000})}catch(e){console.log("BOOT DIAGNOSTICS",JSON.stringify(errors),JSON.stringify(await page.evaluate(()=>({scripts:[...document.scripts].map(x=>x.src),ready:document.documentElement.dataset.appReady,rail:!!document.querySelector("#rail")}))));throw e}
  assert.ok(await page.locator(".home-hero").isVisible(),"New homepage hero must render");
  assert.equal(await page.locator(".rail-link[data-view]").count(),4,"Primary navigation must be present");
