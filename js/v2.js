@@ -23,7 +23,7 @@ const uid=()=>globalThis.crypto?.randomUUID?crypto.randomUUID():"wp-"+Date.now()
 const dateText=d=>d?new Date(d+"T00:00:00").toLocaleDateString("ko-KR",{month:"long",day:"numeric",weekday:"short"}):"";
 const today=()=>new Date().toISOString().slice(0,10);
 const addDays=(d,n)=>{const x=new Date(d+"T00:00:00");x.setDate(x.getDate()+n);return x.toISOString().slice(0,10)};
-const store=window.WaypointStore.createStore({user:null,session:null,trips:[],activeId:null,view:"home",tab:"overview",day:0,filter:"all",map:null,markers:[],routeLayers:[],saved:(()=>{const value=parseStored("waypoint-v2-saved",[]);return Array.isArray(value)?value:[]})(),rates:{},rateDate:null,loading:false,dragId:null});
+const store=window.WaypointStore.createStore({user:null,session:null,trips:[],activeId:null,view:"home",tab:"overview",day:0,filter:"all",map:null,markers:[],routeLayers:[],saved:(()=>{const value=parseStored("waypoint-v2-saved",[]);return Array.isArray(value)?value:[]})(),rates:{},rateDate:null,loading:false,dragId:null,pendingSync:[]});
 const state=store.getState();
 let mapResizeObserver=null;
 function toast(message){const el=document.createElement("div");el.className="toast";el.textContent=message;$("#toasts").append(el);setTimeout(()=>el.remove(),3800)}
@@ -46,7 +46,7 @@ function normalizeTrip(row){
  return {id:row.id,destination:row.destination,startDate:row.start_date,endDate:row.end_date,travelers:row.travelers||1,targetBudget:Number(row.target_budget)||0,style:row.travel_style||"균형 잡힌 여행",transport:row.transport||"대중교통",preferences:row.preferences||{},itinerary,expenses:row.expenses||{},expenseItems:Array.isArray(row.expenses?.items)?row.expenses.items:[],checklist:Array.isArray(row.checklist)?row.checklist:[],reservations:Array.isArray(row.preferences?.reservations)?row.preferences.reservations:[],notes:Array.isArray(row.preferences?.notes)?row.preferences.notes:[],savedPlaces:Array.isArray(row.preferences?.savedPlaces)?row.preferences.savedPlaces:[],recommendations:Array.isArray(row.preferences?.recommendations)?row.preferences.recommendations:[],status:row.status||"upcoming",overview:row.preferences?.overview||"",tips:row.preferences?.tips||[],createdAt:row.created_at};
 }
 const LOCAL_SCHEMA_VERSION=3;
-function localCache(){return safeSet("waypoint-v2-cache",JSON.stringify({schemaVersion:LOCAL_SCHEMA_VERSION,trips:state.trips,activeId:state.activeId,saved:state.saved,updatedAt:new Date().toISOString()}))}
+function localCache(){return safeSet("waypoint-v2-cache",JSON.stringify({schemaVersion:LOCAL_SCHEMA_VERSION,trips:state.trips,activeId:state.activeId,saved:state.saved,pendingSync:state.pendingSync||[],updatedAt:new Date().toISOString()}))}
 function restoreLocal(){
  const x=parseStored("waypoint-v2-cache",null);
  if(!x||typeof x!=="object"||Array.isArray(x))return false;
@@ -55,6 +55,7 @@ function restoreLocal(){
  state.trips=x.trips.filter(t=>t&&typeof t==="object"&&typeof t.id==="string"&&typeof t.destination==="string");
  state.activeId=typeof x.activeId==="string"&&state.trips.some(t=>t.id===x.activeId)?x.activeId:(state.trips[0]?.id||null);
  state.saved=Array.isArray(x.saved)?x.saved:state.saved;
+ state.pendingSync=Array.isArray(x.pendingSync)?[...new Set(x.pendingSync.filter(id=>typeof id==="string"))]:[];
  if(x.schemaVersion!==LOCAL_SCHEMA_VERSION)localCache();
  return true;
 }
@@ -94,12 +95,13 @@ async function loadCloudTrips(){
  setSync("동기화 중","busy");
  const {data,error}=await db.from("trips").select("*").order("updated_at",{ascending:false});
  if(error){setSync("동기화 오류","bad");toast("여행 목록을 불러오지 못했습니다: "+error.message);return}
- const cloud=(data||[]).map(normalizeTrip);
- // Keep local-only drafts when signed in; cloud rows are authoritative for matching IDs.
+ const pending=new Set(state.pendingSync||[]),localById=new Map(state.trips.map(t=>[t.id,t]));
+ const cloud=(data||[]).map(row=>pending.has(row.id)&&localById.has(row.id)?localById.get(row.id):normalizeTrip(row));
+ // Pending local edits take precedence until the retry queue confirms cloud persistence.
  const local=state.trips.filter(t=>!cloud.some(c=>c.id===t.id));
  state.trips=[...cloud,...local];if(!state.activeId||!state.trips.some(t=>t.id===state.activeId))state.activeId=state.trips[0]?.id||null;
  for(const t of state.trips.filter(x=>cloud.some(c=>c.id===x.id)))await loadNormalized(t);
- localCache();setSync("모든 변경 저장됨");renderAll();
+ localCache();setSync("모든 변경 저장됨");renderAll();if(state.pendingSync?.length)flushPendingSync();
 }
 async function loadNormalized(t){
  const [r,e,c,n]=await Promise.all([
@@ -122,6 +124,11 @@ async function callAssistant(action,payload={},timeout=45000){
  if(!response.ok||dataJson.ok===false)throw new Error(dataJson.error||"요청에 실패했습니다. ("+response.status+")");
  return dataJson;
 }
+async function flushPendingSync(){
+ if(!state.user||!navigator.onLine||!state.pendingSync?.length)return;
+ const ids=[...state.pendingSync];for(const id of ids){const trip=state.trips.find(x=>x.id===id);if(trip){const ok=await persistTrip(trip,{quiet:true});if(!ok)break}}
+ if(!state.pendingSync.length)setSync("모든 변경 저장됨");
+}
 async function persistTrip(t,{quiet=false}={}){
  if(!t)return false;localCache();
  if(!state.user){setSync("이 기기에 저장됨");if(!quiet)toast("이 기기에 저장했습니다. 계정에 로그인하면 다른 기기에서도 이용할 수 있습니다.");return true}
@@ -129,8 +136,8 @@ async function persistTrip(t,{quiet=false}={}){
  const row={id:t.id,user_id:state.user.id,destination:t.destination,start_date:t.startDate,end_date:t.endDate,travelers:Number(t.travelers)||1,target_budget:Number(t.targetBudget)||0,travel_style:t.style||"균형 잡힌 여행",transport:t.transport||"대중교통",preferences:{...(t.preferences||{}),overview:t.overview||"",tips:t.tips||[],reservations:t.reservations||[],notes:t.notes||[],savedPlaces:t.savedPlaces||[],recommendations:t.recommendations||[]},itinerary:t.itinerary||[],expenses:{...(t.expenses||{}),items:t.expenseItems||[]},checklist:t.checklist||[],status:t.status||"upcoming",updated_at:new Date().toISOString()};
  let result=t.createdAt?await db.from("trips").update(row).eq("id",t.id).select().single():await db.from("trips").insert(row).select().single();
  if(result.error&&result.error.code==="23505")result=await db.from("trips").update(row).eq("id",t.id).select().single();
- if(result.error){setSync("저장 실패","bad");toast("저장 실패: "+result.error.message);return false}
- t.createdAt=result.data.created_at;await syncNormalized(t);localCache();setSync("모든 변경 저장됨");if(!quiet)toast("여행 정보를 저장했습니다.");return true;
+ if(result.error){state.pendingSync=Array.from(new Set([...(state.pendingSync||[]),t.id]));localCache();setSync("연결 대기 · 기기에 보관","bad");if(!quiet)toast("온라인 저장에 실패했습니다. 변경 내용은 기기에 보관하고 연결 복구 후 다시 시도합니다.");return false}
+ t.createdAt=result.data.created_at;await syncNormalized(t);state.pendingSync=(state.pendingSync||[]).filter(id=>id!==t.id);localCache();setSync("모든 변경 저장됨");if(!quiet)toast("여행 정보를 저장했습니다.");return true;
 }
 async function syncNormalized(t){
  const days=tripDays(t);const dayRows=days.map((d,i)=>({trip_id:t.id,day_date:d.date,position:i,theme:d.theme||""}));
