@@ -76,7 +76,7 @@ try{
  assert.ok(await offline.locator("#createTripForm").isVisible(),"Offline-only trip creation form opens");
   assert.ok(await offline.locator('input[name="styles"]').count()>=5,"Trip setup should support multiple travel styles");
  await offline.locator('input[name="destination"]').fill("로컬 저장 테스트");
- await offline.locator("#submitCreate").click();
+ await offline.locator("#wp-wizard-next").click();\n await offline.locator("#wp-wizard-next").click();\n await offline.locator("#submitCreate").click();
  await offline.locator("#view-trip.active").waitFor({timeout:10000});
  await offline.locator("#panel-plan.active").waitFor({timeout:5000});
  const offlineTemplate=await offline.evaluate(()=>({cards:document.querySelectorAll("#panel-plan .stop-card").length,activeTab:document.querySelector(".trip-tab.active")?.dataset.tab,trip:JSON.parse(localStorage.getItem("waypoint-v2-cache")||"{}").trips?.[0]?.itinerary?.[0]}));
@@ -130,7 +130,7 @@ try{
  await ai.locator('input[name="destination"]').fill("일본 오사카");
  const start=await ai.locator('input[name="startDate"]').inputValue();
  await ai.locator('input[name="endDate"]').fill(start);
- await ai.locator("#submitCreate").click();
+ await ai.locator("#wp-wizard-next").click();\n await ai.locator("#wp-wizard-next").click();\n await ai.locator("#submitCreate").click();
  await ai.locator("#panel-plan.active").waitFor({timeout:30000});
  await ai.locator(".stop-card").filter({hasText:"Osaka Castle"}).waitFor({timeout:15000});
  assert.ok(await ai.locator("#optimizeRoute").isVisible(),"Itinerary should expose route optimization");
@@ -146,7 +146,7 @@ try{
  await ai.locator("#addExpense").click();
  await ai.locator('#expenseForm input[name="title"]').fill("공항 리무진");
  await ai.locator('#expenseForm input[name="amount"]').fill("18000");
- await ai.locator("#expenseForm").evaluate(form=>form.requestSubmit());
+ await ai.locator("#expenseForm button[type=submit]").click();
  await ai.waitForTimeout(500);
  console.log("EXPENSE DIAGNOSTICS",JSON.stringify(await ai.evaluate(()=>({panel:document.querySelector("#panel-budget")?.innerText.slice(0,900),modal:document.querySelector("#modalContent")?.innerText.slice(0,300),cache:JSON.parse(localStorage.getItem("waypoint-v2-cache")||"{}").trips?.[0]?.expenseItems}))),"PAGE ERRORS",JSON.stringify(errors));
  await ai.locator(".expense-item").filter({hasText:"공항 리무진"}).waitFor({timeout:10000});
