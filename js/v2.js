@@ -75,8 +75,8 @@ function updateAccountUI(){
  $("#userSub").textContent=logged?state.user.email:"계정에 여행 저장";
  $("#userAvatar").textContent=(state.user?.user_metadata?.display_name||state.user?.email||"W").slice(0,1).toUpperCase();
  $("#signOut").hidden=!logged;$("#authLogout").hidden=!logged;$("#authForm").hidden=logged;
- $("#accountInfo").textContent=logged?state.user.email+" 계정으로 동기화 중입니다.":(db?"로그인하면 여행 데이터가 계정에 동기화됩니다.":"온라인 계정 연결을 사용할 수 없습니다. 여행 정보는 이 기기에 저장됩니다.");
- $("#authForm").hidden=!db||logged;
+ $("#accountInfo").textContent=logged?state.user.email+" 계정으로 동기화 중입니다.":(supabaseAvailable?"로그인하면 여행 데이터가 계정에 동기화됩니다.":"온라인 계정 연결을 사용할 수 없습니다. 여행 정보는 이 기기에 저장됩니다.");
+ $("#authForm").hidden=!supabaseAvailable||logged;
  $("#connectionBadge")?.remove();
 }
 async function loadCloudTrips(){
@@ -103,7 +103,7 @@ async function loadNormalized(t){
  if(!n.error&&n.data?.length)t.notes=n.data.map(x=>({id:x.id,title:x.title,content:x.content,stopId:x.stop_id,createdAt:x.created_at}));
 }
 async function callAssistant(action,payload={},timeout=45000){
- if(!db)throw new Error("온라인 서비스 연결을 사용할 수 없습니다. 인터넷 연결과 Supabase 스크립트 로딩 상태를 확인해 주세요.");
+ if(!supabaseAvailable)throw new Error("온라인 서비스 연결을 사용할 수 없습니다. 인터넷 연결과 Supabase 스크립트 로딩 상태를 확인해 주세요.");
  const {data}=await db.auth.getSession();const token=data.session?.access_token;
  if(!token)throw new Error("AI 기능을 이용하려면 먼저 로그인해 주세요.");
  const response=await fetch(SUPABASE_URL+"/functions/v1/travel-assistant",{method:"POST",headers:{apikey:SUPABASE_KEY,Authorization:"Bearer "+token,"Content-Type":"application/json"},body:JSON.stringify({action,...payload}),signal:AbortSignal.timeout(timeout)});
