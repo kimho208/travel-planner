@@ -43,7 +43,7 @@ function donePercent(t){const a=checklist(t);return a.length?Math.round(a.filter
 function normalizeTrip(row){
  const itinerary=Array.isArray(row.itinerary)?row.itinerary:[];
  for(const d of itinerary)for(const s of dayStops(d))stopId(s);
- return {id:row.id,destination:row.destination,startDate:row.start_date,endDate:row.end_date,travelers:row.travelers||1,targetBudget:Number(row.target_budget)||0,style:row.travel_style||"균형 잡힌 여행",transport:row.transport||"대중교통",preferences:row.preferences||{},itinerary,expenses:row.expenses||{},expenseItems:Array.isArray(row.expenses?.items)?row.expenses.items:[],checklist:Array.isArray(row.checklist)?row.checklist:[],reservations:Array.isArray(row.preferences?.reservations)?row.preferences.reservations:[],notes:Array.isArray(row.preferences?.notes)?row.preferences.notes:[],savedPlaces:Array.isArray(row.preferences?.savedPlaces)?row.preferences.savedPlaces:[],recommendations:Array.isArray(row.preferences?.recommendations)?row.preferences.recommendations:[],routeLegs:Array.isArray(row.preferences?.routeLegs)?row.preferences.routeLegs:[],status:row.status||"upcoming",overview:row.preferences?.overview||"",tips:row.preferences?.tips||[],createdAt:row.created_at};
+ return {id:row.id,destination:row.destination,startDate:row.start_date,endDate:row.end_date,travelers:row.travelers||1,targetBudget:Number(row.target_budget)||0,style:row.travel_style||"균형 잡힌 여행",transport:row.transport||"대중교통",preferences:row.preferences||{},styles:row.preferences?.styles||[],budgetLevel:row.preferences?.budgetLevel||"balanced",hotelArea:row.preferences?.hotelArea||"",itinerary,expenses:row.expenses||{},expenseItems:Array.isArray(row.expenses?.items)?row.expenses.items:[],checklist:Array.isArray(row.checklist)?row.checklist:[],reservations:Array.isArray(row.preferences?.reservations)?row.preferences.reservations:[],notes:Array.isArray(row.preferences?.notes)?row.preferences.notes:[],savedPlaces:Array.isArray(row.preferences?.savedPlaces)?row.preferences.savedPlaces:[],recommendations:Array.isArray(row.preferences?.recommendations)?row.preferences.recommendations:[],routeLegs:Array.isArray(row.preferences?.routeLegs)?row.preferences.routeLegs:[],status:row.status||"upcoming",overview:row.preferences?.overview||"",tips:row.preferences?.tips||[],createdAt:row.created_at};
 }
 const LOCAL_SCHEMA_VERSION=3;
 function localCache(){return safeSet("waypoint-v2-cache",JSON.stringify({schemaVersion:LOCAL_SCHEMA_VERSION,trips:state.trips,activeId:state.activeId,saved:state.saved,pendingSync:state.pendingSync||[],updatedAt:new Date().toISOString()}))}
@@ -133,7 +133,7 @@ async function persistTrip(t,{quiet=false}={}){
  if(!t)return false;localCache();
  if(!state.user){setSync("이 기기에 저장됨");if(!quiet)toast("이 기기에 저장했습니다. 계정에 로그인하면 다른 기기에서도 이용할 수 있습니다.");return true}
  setSync("저장 중","busy");
- const row={id:t.id,user_id:state.user.id,destination:t.destination,start_date:t.startDate,end_date:t.endDate,travelers:Number(t.travelers)||1,target_budget:Number(t.targetBudget)||0,travel_style:t.style||"균형 잡힌 여행",transport:t.transport||"대중교통",preferences:{...(t.preferences||{}),overview:t.overview||"",tips:t.tips||[],reservations:t.reservations||[],notes:t.notes||[],savedPlaces:t.savedPlaces||[],recommendations:t.recommendations||[],routeLegs:t.routeLegs||[]},itinerary:t.itinerary||[],expenses:{...(t.expenses||{}),items:t.expenseItems||[]},checklist:t.checklist||[],status:t.status||"upcoming",updated_at:new Date().toISOString()};
+ const row={id:t.id,user_id:state.user.id,destination:t.destination,start_date:t.startDate,end_date:t.endDate,travelers:Number(t.travelers)||1,target_budget:Number(t.targetBudget)||0,travel_style:t.style||"균형 잡힌 여행",transport:t.transport||"대중교통",preferences:{...(t.preferences||{}),overview:t.overview||"",tips:t.tips||[],styles:t.styles||[],budgetLevel:t.budgetLevel||"balanced",hotelArea:t.hotelArea||"",reservations:t.reservations||[],notes:t.notes||[],savedPlaces:t.savedPlaces||[],recommendations:t.recommendations||[],routeLegs:t.routeLegs||[]},itinerary:t.itinerary||[],expenses:{...(t.expenses||{}),items:t.expenseItems||[]},checklist:t.checklist||[],status:t.status||"upcoming",updated_at:new Date().toISOString()};
  let result=t.createdAt?await db.from("trips").update(row).eq("id",t.id).select().single():await db.from("trips").insert(row).select().single();
  if(result.error&&result.error.code==="23505")result=await db.from("trips").update(row).eq("id",t.id).select().single();
  if(result.error){state.pendingSync=Array.from(new Set([...(state.pendingSync||[]),t.id]));localCache();setSync("연결 대기 · 기기에 보관","bad");if(!quiet)toast("온라인 저장에 실패했습니다. 변경 내용은 기기에 보관하고 연결 복구 후 다시 시도합니다.");return false}
@@ -193,7 +193,7 @@ async function createTrip(e){
  if(!t.destination){toast("여행지를 입력해 주세요.");return}
  if(t.endDate<t.startDate){toast("도착일은 출발일 이후여야 합니다.");return}
  if(!state.user){
-  for(let date=t.startDate;date<=t.endDate;date=addDays(date,1))t.itinerary.push({date,theme:"자유 일정",items:[]});
+  t.itinerary=makeOfflineTemplate(t,f.get("notes"));
   t.checklist=makeStarterChecklist(t);
   state.trips.unshift(t);state.activeId=t.id;await persistTrip(t,{quiet:true});
   closeModal();state.tab="plan";switchView("trip");toast("여행을 이 기기에 저장했습니다. 로그인하면 계정 동기화를 사용할 수 있습니다.");return;
